@@ -123,6 +123,17 @@ class LauncherActivity: Activity()
 					+ "(${StreamQualityPrefs.SHARPNESS_NAMES[prefs.sharpness]})")
 		})
 
+		// Acao e nao ajuste: grava os valores do preset e deixa o painel em
+		// jogo refina-los. Vale so no modo imersivo, onde existe tela propria.
+		coluna.addView(navegacao("Cinema preset",
+				"Sets a flat 60° screen at 3.5 m, eye height, with the room in passthrough at "
+						+ "the darkest level. Applies to immersive mode; fine-tune in game with "
+						+ "the settings chord; Triangle there cycles how much of the room shows.") {
+			ScreenPrefs(this).applyCinemaPreset()
+			Log.i(TAG, "Cinema preset applied")
+			explicar("Cinema preset applied. Start a stream in immersive mode to see it.")
+		})
+
 		// --------------------------------------------------------------- 3D
 		coluna.addView(secao("3D"))
 		coluna.addView(linha("Emulated 3D", { if(prefs.syntheticStereo) "on" else "off" },

@@ -87,8 +87,32 @@ class ScreenPrefs(context: Context)
 		get() = prefs.getBoolean(KEY_FLIP, true)
 		set(value) { prefs.edit().putBoolean(KEY_FLIP, value).apply() }
 
+	/**
+	 * Preset "sala de cinema": tela plana de ~60 graus a 3,5 m, na altura dos
+	 * olhos, com o quarto no passthrough no degrau mais escuro.
+	 *
+	 * Grava so os valores que o jogador ja ajusta em jogo (distancia, arco,
+	 * altura, forma, passthrough e modo cinema), entao qualquer um deles pode
+	 * ser refinado depois pelo painel. Nao liga nada novo no lado nativo.
+	 */
+	fun applyCinemaPreset()
+	{
+		layerShape = SHAPE_QUAD
+		radius = CINEMA_PRESET_RADIUS
+		centralAngle = CINEMA_PRESET_ANGLE
+		heightOffset = 0f
+		passthroughEnabled = true
+		cinema = CINEMA_NAMES.size - 1
+	}
+
 	companion object
 	{
+		/** Distancia do preset de cinema, em metros. */
+		const val CINEMA_PRESET_RADIUS = 3.5f
+
+		/** Arco do preset de cinema em radianos (~60 graus). */
+		const val CINEMA_PRESET_ANGLE = 1.05f
+
 		/** Nome de cada degrau do modo cinema, na ordem. */
 		val CINEMA_NAMES = listOf("normal", "soft", "medium", "strong")
 
