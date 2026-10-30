@@ -53,6 +53,12 @@ jobs:
 
       - name: Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # O padrao da action instala o pacote 'tools', que o sdkmanager atual
+          # (cmdline-tools 16) nao tem mais: o passo falhava com "Failed to find
+          # package 'tools'". Os pacotes de que o build precisa vem no passo
+          # "NDK e CMake" logo abaixo.
+          packages: ''
 
       # O NDK sao mais de um giga que nao mudam entre builds. Baixar de novo a
       # cada push custava mais de meio minuto por build, e a chave e a lista de
