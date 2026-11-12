@@ -78,8 +78,7 @@ class LogServer(private val context: Context)
 		val request = client.getInputStream().bufferedReader().readLine().orEmpty()
 		val full = request.split(" ").getOrNull(1) ?: "/"
 		// Sem o segredo no caminho não há resposta: ver [ServerToken].
-		val path = ServerToken.strip(full, token) ?: run
-		{
+		val path = ServerToken.strip(full, token) ?: run {
 			write(client.getOutputStream(), "not found", "404 Not Found")
 			return
 		}
