@@ -40,7 +40,7 @@
 
     <application
         android:name="io.github.gblandro.p5m.P5MApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_p5m"
         android:label="P5M"
         android:isGame="true"

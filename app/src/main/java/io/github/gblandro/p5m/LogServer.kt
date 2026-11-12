@@ -29,9 +29,10 @@ class LogServer(private val context: Context)
 {
 	private var server: ServerSocket? = null
 	private var worker: Thread? = null
+	private var token: String = ""
 
 	val url: String?
-		get() = server?.let { "http://${localAddress()}:${it.localPort}/" }
+		get() = server?.let { "http://${localAddress()}:${it.localPort}/$token/" }
 
 	fun start(): Boolean
 	{
@@ -40,6 +41,7 @@ class LogServer(private val context: Context)
 		return try
 		{
 			val socket = ServerSocket(PORT)
+			token = ServerToken.generate()
 			server = socket
 			worker = thread(name = "p5m-log-server", isDaemon = true) { serve(socket) }
 			Log.i(TAG, "Diagnostics available at ${url}")
@@ -74,7 +76,13 @@ class LogServer(private val context: Context)
 	private fun respond(client: Socket)
 	{
 		val request = client.getInputStream().bufferedReader().readLine().orEmpty()
-		val path = request.split(" ").getOrNull(1) ?: "/"
+		val full = request.split(" ").getOrNull(1) ?: "/"
+		// Sem o segredo no caminho não há resposta: ver [ServerToken].
+		val path = ServerToken.strip(full, token) ?: run
+		{
+			write(client.getOutputStream(), "not found", "404 Not Found")
+			return
+		}
 
 		val body = when
 		{
@@ -132,12 +140,12 @@ class LogServer(private val context: Context)
 		return linhas.takeLast(quantas).joinToString("\n")
 	}
 
-	private fun write(out: OutputStream, body: String)
+	private fun write(out: OutputStream, body: String, status: String = "200 OK")
 	{
 		val bytes = body.toByteArray(Charsets.UTF_8)
 		// text/plain para o navegador mostrar em vez de baixar, que no celular
 		// e o que permite selecionar e copiar.
-		val header = "HTTP/1.1 200 OK\r\n" +
+		val header = "HTTP/1.1 $status\r\n" +
 				"Content-Type: text/plain; charset=utf-8\r\n" +
 				"Content-Length: ${bytes.size}\r\n" +
 				"Connection: close\r\n\r\n"

@@ -54,13 +54,14 @@ class PsnLoginRelay(private val context: Context)
 	private var worker: Thread? = null
 	private var loginUrl: String = ""
 	private var onCode: ((String) -> Unit)? = null
+	private var token: String = ""
 
 	val url: String?
-		get() = server?.let { "http://${localAddress()}:${it.localPort}/" }
+		get() = server?.let { "http://${localAddress()}:${it.localPort}/$token" }
 
 	/** Endereço sem o esquema, que é o que se digita no celular. */
 	val shortAddress: String?
-		get() = server?.let { "${localAddress()}:${it.localPort}" }
+		get() = server?.let { "${localAddress()}:${it.localPort}/$token" }
 
 	fun start(loginUrl: String, onCode: (String) -> Unit): Boolean
 	{
@@ -71,6 +72,7 @@ class PsnLoginRelay(private val context: Context)
 		return try
 		{
 			val socket = ServerSocket(PORT)
+			token = ServerToken.generate()
 			server = socket
 			worker = thread(name = "p5m-psn-relay", isDaemon = true) { serve(socket) }
 			Log.i(TAG, "PSN: sign-in bridge at ${url}")
@@ -106,7 +108,13 @@ class PsnLoginRelay(private val context: Context)
 	private fun respond(client: Socket)
 	{
 		val request = client.getInputStream().bufferedReader().readLine().orEmpty()
-		val path = request.split(" ").getOrNull(1) ?: "/"
+		val full = request.split(" ").getOrNull(1) ?: "/"
+		// Sem o segredo no caminho não há resposta: ver [ServerToken].
+		val path = ServerToken.strip(full, token) ?: run
+		{
+			write(client.getOutputStream(), "not found", "404 Not Found")
+			return
+		}
 
 		// Formulário por GET, e não por POST, de propósito: assim a requisição
 		// inteira cabe na primeira linha e o servidor continua sendo um
@@ -199,7 +207,7 @@ class PsnLoginRelay(private val context: Context)
 			<div>
 				<p>Copy the whole address of that page that did not load and paste
 				it below.</p>
-				<form action="/code" method="get">
+				<form action="/$token/code" method="get">
 					<input name="url" placeholder="https://remoteplay.dl.playstation.net/..."
 						autocomplete="off" autocapitalize="off" spellcheck="false">
 					<button type="submit">Send to the headset</button>
@@ -219,7 +227,7 @@ class PsnLoginRelay(private val context: Context)
 		<p class="sub">What you pasted has no <code>code=</code> in it. Check that
 		you copied the address of the page that did not load, and not the one of
 		the sign-in page.</p>
-		<p><a class="botao" href="/">Try again</a></p>
+		<p><a class="botao" href="/$token/">Try again</a></p>
 	""")
 
 	private fun page(corpo: String) = """<!doctype html>
@@ -250,10 +258,10 @@ class PsnLoginRelay(private val context: Context)
   code { background:#1a1a22; padding:2px 5px; border-radius:4px; }
 </style></head><body>$corpo</body></html>"""
 
-	private fun write(out: OutputStream, body: String)
+	private fun write(out: OutputStream, body: String, status: String = "200 OK")
 	{
 		val bytes = body.toByteArray(Charsets.UTF_8)
-		val header = "HTTP/1.1 200 OK\r\n" +
+		val header = "HTTP/1.1 $status\r\n" +
 				"Content-Type: text/html; charset=utf-8\r\n" +
 				"Content-Length: ${bytes.size}\r\n" +
 				"Connection: close\r\n\r\n"
