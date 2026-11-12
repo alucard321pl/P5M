@@ -29,6 +29,14 @@ object Tx
 		return PL_STRINGS[en] ?: en
 	}
 
+	/** Como [tr], para textos com lacunas `{0}`, `{1}`: traduz o molde e preenche. */
+	fun f(en: String, vararg args: Any?): String
+	{
+		var s = tr(en)
+		args.forEachIndexed { i, a -> s = s.replace("{$i}", a.toString()) }
+		return s
+	}
+
 	/** Valor "desligado" em qualquer idioma: a lista o mostra apagado. */
 	fun isOff(value: String) = value == "off" || value == "off (2D)"
 			|| value == "wył." || value == "wyłączona" || value == "wyłączony"

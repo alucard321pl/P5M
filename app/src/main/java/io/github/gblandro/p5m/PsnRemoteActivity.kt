@@ -112,7 +112,7 @@ class PsnRemoteActivity: Activity()
 
 		if(!PsnAuth.isLoggedIn(this))
 		{
-			status.text = "No account signed in."
+			status.text = Tx.tr("No account signed in.")
 
 			root.addView(bigButton("Sign in from your phone") { showPhoneLogin() })
 			root.addView(hint(
@@ -130,7 +130,7 @@ class PsnRemoteActivity: Activity()
 			return
 		}
 
-		status.text = "Looking for the consoles on this account…"
+		status.text = Tx.tr("Looking for the consoles on this account…")
 		root.addView(bigButton("Sign out") {
 			PsnAuth.forget(this)
 			CookieManager.getInstance().removeAllCookies(null)
@@ -180,12 +180,12 @@ class PsnRemoteActivity: Activity()
 					"The phone has to be on the same network as the headset — if " +
 					"the network isolates devices from each other, put the headset " +
 					"on the phone's own hotspot."))
-			status.text = "Waiting for the code to arrive…"
+			status.text = Tx.tr("Waiting for the code to arrive…")
 		}
 		else
 		{
-			status.text = "Could not publish the page on the network. Use the " +
-					"field below, or try the other path."
+			status.text = Tx.tr("Could not publish the page on the network. Use the " +
+					"field below, or try the other path.")
 		}
 		root.addView(status)
 
@@ -212,7 +212,7 @@ class PsnRemoteActivity: Activity()
 				it.isNotEmpty() && !it.contains(' ') && !it.contains('/')
 			}
 			if(code.isNullOrEmpty())
-				status.text = "I could not find a code= in there."
+				status.text = Tx.tr("I could not find a code= in there.")
 			else
 				concludeLogin(code)
 		})
@@ -233,7 +233,7 @@ class PsnRemoteActivity: Activity()
 		setContentView(scroll)
 		root.addView(title("Remote connection"))
 		status = TextView(this).apply {
-			text = "Finishing the sign-in…"
+			text = Tx.tr("Finishing the sign-in…")
 			setTextColor(Color.parseColor("#9aa0a6"))
 			setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
 			gravity = Gravity.CENTER
@@ -244,7 +244,7 @@ class PsnRemoteActivity: Activity()
 			ui.post {
 				showHome()
 				if(erro != null)
-					status.text = erro
+					status.text = Tx.tr(erro)
 			}
 		}.start()
 	}
@@ -328,7 +328,7 @@ class PsnRemoteActivity: Activity()
 			Log.e(TAG, "PSN: redirect with no code")
 			ui.post {
 				showHome()
-				status.text = "PSN redirected without a code. Try signing in again."
+				status.text = Tx.tr("PSN redirected without a code. Try signing in again.")
 			}
 			return true
 		}
@@ -362,9 +362,9 @@ class PsnRemoteActivity: Activity()
 		// porque acontece longe de casa.
 		if(resultado.error != null)
 		{
-			status.text = "The PSN query failed: ${resultado.error}.\n\n" +
+			status.text = Tx.f("The PSN query failed: {0}.\n\n" +
 					"This is a problem between the headset and Sony, not with the " +
-					"console. The diary has the full line."
+					"console. The diary has the full line.", resultado.error)
 			root.addView(bigButton("Sign out and sign in again") {
 				PsnAuth.forget(this)
 				CookieManager.getInstance().removeAllCookies(null)
@@ -375,20 +375,20 @@ class PsnRemoteActivity: Activity()
 		val lista = resultado.devices
 		if(lista.isEmpty())
 		{
-			status.text = "PSN answered, and the account has no console visible " +
+			status.text = Tx.tr("PSN answered, and the account has no console visible " +
 					"for remote connection.\n\n" +
 					"This is not a sign-in failure: the token worked. A console " +
 					"only shows up in this list while it is on, or in rest mode " +
 					"with \"Stay connected to the internet\" enabled in the power " +
 					"saving options. Unplugged, it does not exist as far as Sony " +
-					"is concerned."
+					"is concerned.")
 			return
 		}
-		status.text = "${lista.size} console(s) on this account."
+		status.text = Tx.f("{0} console(s) on this account.", lista.size)
 		for(device in lista)
 		{
 			val etiqueta = device.name +
-					(if(device.remotePlayEnabled) "" else "  (Remote Play off)")
+					(if(device.remotePlayEnabled) "" else "  " + Tx.tr("(Remote Play off)"))
 			root.addView(bigButton(etiqueta) { connect(device) })
 		}
 		root.addView(hint(
@@ -404,7 +404,7 @@ class PsnRemoteActivity: Activity()
 		if(busy)
 			return
 		busy = true
-		status.text = "Preparing the connection to ${device.name}…"
+		status.text = Tx.f("Preparing the connection to {0}…", device.name)
 		Thread {
 			val token = PsnAuth.validToken(this)
 			val account = PsnAuth.accountId(this)
@@ -412,8 +412,8 @@ class PsnRemoteActivity: Activity()
 				busy = false
 				if(token.isNullOrEmpty() || account == null)
 				{
-					status.text = "The account token expired and could not be " +
-							"refreshed. Sign out and sign in again."
+					status.text = Tx.tr("The account token expired and could not be " +
+							"refreshed. Sign out and sign in again.")
 					return@post
 				}
 				val info = ConnectInfo(
@@ -462,7 +462,7 @@ class PsnRemoteActivity: Activity()
 	}
 
 	private fun title(text: String) = TextView(this).apply {
-		this.text = text
+		this.text = Tx.tr(text)
 		setTextColor(Color.WHITE)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
 		gravity = Gravity.CENTER
@@ -471,7 +471,7 @@ class PsnRemoteActivity: Activity()
 	}
 
 	private fun hint(text: String) = TextView(this).apply {
-		this.text = text
+		this.text = Tx.tr(text)
 		setTextColor(Color.parseColor("#9aa0a6"))
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
 		gravity = Gravity.CENTER
@@ -479,7 +479,7 @@ class PsnRemoteActivity: Activity()
 	}
 
 	private fun bigButton(label: String, onClick: () -> Unit) = Button(this).apply {
-		text = label
+		text = Tx.tr(label)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
 		setOnClickListener { onClick() }
 		layoutParams = LinearLayout.LayoutParams(

@@ -55,7 +55,7 @@ class DiagnosticActivity: Activity()
 		}
 
 		root.addView(TextView(this).apply {
-			text = "P5M — diagnostics"
+			text = Tx.tr("P5M — diagnostics")
 			setTextColor(Color.WHITE)
 			setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
 			setTypeface(typeface, Typeface.BOLD)
@@ -71,7 +71,7 @@ class DiagnosticActivity: Activity()
 		// Sozinho e no topo: e o unico botao aqui que serve a quem nao entende
 		// nada do que esta escrito no resto da tela.
 		root.addView(Button(this).apply {
-			text = "Report a problem"
+			text = Tx.tr("Report a problem")
 			setOnClickListener { reportProblem() }
 			layoutParams = LinearLayout.LayoutParams(
 				LinearLayout.LayoutParams.MATCH_PARENT,
@@ -163,7 +163,7 @@ class DiagnosticActivity: Activity()
 	private fun reportProblem()
 	{
 		val report = buildReport()
-		clipboard(report, "Report copied. Paste it if the page opens empty.")
+		clipboard(report, Tx.tr("Report copied. Paste it if the page opens empty."))
 
 		val serverLine = if(server.url != null) server.url
 			else if(server.start()) server.url else null
@@ -228,7 +228,7 @@ class DiagnosticActivity: Activity()
 
 
 	private fun button(label: String, onClick: () -> Unit) = Button(this).apply {
-		text = label
+		text = Tx.tr(label)
 		gravity = Gravity.CENTER
 		setOnClickListener { onClick() }
 		layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -246,7 +246,7 @@ class DiagnosticActivity: Activity()
 	private fun copySummary()
 	{
 		val text = buildReport()
-		clipboard(text, "${text.lines().size} summary line(s) copied")
+		clipboard(text, Tx.f("{0} summary line(s) copied", text.lines().size))
 	}
 
 	private fun toggleServer()
@@ -254,17 +254,17 @@ class DiagnosticActivity: Activity()
 		if(server.url != null)
 		{
 			server.stop()
-			output.text = "Log server stopped.\n\n${output.text}"
+			output.text = Tx.tr("Log server stopped.") + "\n\n${output.text}"
 			return
 		}
 		if(server.start())
-			output.text = "Open this address on your phone or PC, on the same network:\n\n" +
-					"    ${server.url}\n\n" +
-					"The page shows the diagnostics as plain text, where copying and\n" +
-					"sending work normally. It stops when you leave this screen.\n\n" +
-					"${output.text}"
+			output.text = Tx.tr("Open this address on your phone or PC, on the same network:") +
+					"\n\n    ${server.url}\n\n" +
+					Tx.tr("The page shows the diagnostics as plain text, where copying and " +
+					"sending work normally. It stops when you leave this screen.") +
+					"\n\n${output.text}"
 		else
-			output.text = "Could not start the server.\n\n${output.text}"
+			output.text = Tx.tr("Could not start the server.") + "\n\n${output.text}"
 	}
 
 	private fun refresh()
@@ -396,14 +396,14 @@ class DiagnosticActivity: Activity()
 	private fun copyToClipboard(crashOnly: Boolean)
 	{
 		val text = if(crashOnly)
-			P5MApp.lastCrash(this) ?: "No crash recorded."
+			P5MApp.lastCrash(this) ?: Tx.tr("No crash recorded.")
 		else
 			output.text.toString()
 
 		clipboard(
 			text,
-			if(crashOnly) "Crash copied (${text.length} characters)."
-			else "Full log copied (${text.length} characters)."
+			if(crashOnly) Tx.f("Crash copied ({0} characters).", text.length)
+			else Tx.f("Full log copied ({0} characters).", text.length)
 		)
 	}
 
@@ -423,8 +423,8 @@ class DiagnosticActivity: Activity()
 		if(diario == null && crash == null)
 		{
 			Toast.makeText(this,
-					"There is no record from a previous version. It shows up here "
-							+ "after the first APK change.", Toast.LENGTH_LONG).show()
+					Tx.tr("There is no record from a previous version. It shows up here "
+							+ "after the first APK change."), Toast.LENGTH_LONG).show()
 			return
 		}
 
@@ -438,8 +438,7 @@ class DiagnosticActivity: Activity()
 			append("=== DIARY FROM THE PREVIOUS VERSION ===\n")
 			append(diario ?: "(empty)")
 		}
-		clipboard(texto, "Record from the previous version copied " +
-				"(${texto.length} characters).")
+		clipboard(texto, Tx.f("Record from the previous version copied ({0} characters).", texto.length))
 	}
 
 	private fun clipboard(text: String, message: String)
@@ -471,11 +470,11 @@ class DiagnosticActivity: Activity()
 				putExtra(Intent.EXTRA_SUBJECT, "P5M — diagnostics")
 				addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 			}
-			startActivity(Intent.createChooser(intent, "Send diagnostics"))
+			startActivity(Intent.createChooser(intent, Tx.tr("Send diagnostics")))
 		}
 		catch(e: Throwable)
 		{
-			output.text = "Failed to write the file: ${e::class.java.simpleName}: ${e.message}" +
+			output.text = Tx.tr("Failed to write the file:") + " ${e::class.java.simpleName}: ${e.message}" +
 					"\n\n${output.text}"
 		}
 	}
@@ -509,18 +508,18 @@ class DiagnosticActivity: Activity()
 			// O pedido de permissao volta em onRequestPermissionsResult, e a
 			// sonda recomeca de la. Pedir e sondar na mesma passada rodaria a
 			// sonda antes de o usuario ter respondido.
-			output.text = "Asking for Bluetooth permission. Answer the prompt, then press the button again."
+			output.text = Tx.tr("Asking for Bluetooth permission. Answer the prompt, then press the button again.")
 			requestPermissions(arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT), PEDIDO_BLUETOOTH)
 			return
 		}
 
-		output.text = "Two passes of red, green and blue, each colour held for a second. Watch the controller and note which pass lit up, if any."
+		output.text = Tx.tr("Two passes of red, green and blue, each colour held for a second. Watch the controller and note which pass lit up, if any.")
 		val sonda = hid ?: DualSenseHid(this).also { hid = it }
 		Thread {
 			val relatorio = sonda.sondar()
 			runOnUiThread {
 				output.text = "--- DualSense HID probe ---\n\n" + relatorio +
-						"\nBoth passes go through the interrupt channel. Did either one light up?"
+						"\n" + Tx.tr("Both passes go through the interrupt channel. Did either one light up?")
 			}
 		}.start()
 	}
@@ -537,18 +536,18 @@ class DiagnosticActivity: Activity()
 	{
 		if(!DualSenseHid.disponivel(this))
 		{
-			output.text = "Asking for Bluetooth permission. Answer the prompt, then press the button again."
+			output.text = Tx.tr("Asking for Bluetooth permission. Answer the prompt, then press the button again.")
 			requestPermissions(arrayOf(android.Manifest.permission.BLUETOOTH_CONNECT), PEDIDO_BLUETOOTH)
 			return
 		}
 
-		output.text = "Three bursts of a 90 Hz tone: full strength, two thirds, one third. Hold the controller and judge the first one — that is the ceiling."
+		output.text = Tx.tr("Three bursts of a 90 Hz tone: full strength, two thirds, one third. Hold the controller and judge the first one — that is the ceiling.")
 		val ponte = hid ?: DualSenseHid(this).also { hid = it }
 		Thread {
 			val relatorio = DualSenseHaptics(this, ponte).ensaiar()
 			runOnUiThread {
 				output.text = "--- DualSense haptics bench ---\n\n" + relatorio +
-						"\nWas the first burst strong? If yes, the ceiling is high and the game track is what is quiet. If no, this is as hard as the coil goes."
+						"\n" + Tx.tr("Was the first burst strong? If yes, the ceiling is high and the game track is what is quiet. If no, this is as hard as the coil goes.")
 			}
 		}.start()
 	}
@@ -560,7 +559,7 @@ class DiagnosticActivity: Activity()
 		// Nao refaz a acao sozinho: o pedido pode ter vindo de qualquer um dos
 		// dois botoes, e adivinhar qual deles erraria metade das vezes.
 		if(requestCode == PEDIDO_BLUETOOTH && DualSenseHid.disponivel(this))
-			output.text = "Bluetooth permission granted. Press the button again."
+			output.text = Tx.tr("Bluetooth permission granted. Press the button again.")
 	}
 
 	override fun onDestroy()

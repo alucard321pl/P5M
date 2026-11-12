@@ -9,6 +9,7 @@
 // AspectRatioFrameLayout -- que o viewBinding referencia -- depende dele.
 package com.metallic.chiaki.stream
 
+import io.github.gblandro.p5m.Tx
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -604,7 +605,7 @@ class VrStreamActivity: ComponentActivity()
 	private fun showMessage(message: String)
 	{
 		setContentView(TextView(this).apply {
-			text = "P5M\n\n$message"
+			text = "P5M\n\n" + message.split("\n\n").joinToString("\n\n") { Tx.tr(it) }
 			setTextColor(Color.WHITE)
 			setBackgroundColor(Color.parseColor("#101014"))
 			setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
@@ -1508,11 +1509,11 @@ class VrStreamActivity: ComponentActivity()
 	/** Nome legível da curvatura: o número em si não diz nada a quem olha. */
 	private fun curvatureName() = when
 	{
-		screenPrefs.layerShape == ScreenPrefs.SHAPE_QUAD -> "n/a (flat screen)"
-		screenPrefs.curvature < 0.3f -> "almost flat"
-		screenPrefs.curvature < 0.5f -> "subtle"
-		screenPrefs.curvature < 0.8f -> "medium"
-		else -> "maximum"
+		screenPrefs.layerShape == ScreenPrefs.SHAPE_QUAD -> Tx.tr("n/a (flat screen)")
+		screenPrefs.curvature < 0.3f -> Tx.tr("almost flat")
+		screenPrefs.curvature < 0.5f -> Tx.tr("subtle")
+		screenPrefs.curvature < 0.8f -> Tx.tr("medium")
+		else -> Tx.tr("maximum")
 	}
 
 	/**
@@ -1561,15 +1562,15 @@ class VrStreamActivity: ComponentActivity()
 			textSize = 40f
 			typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
 		}
-		canvas.drawText("opens the settings panel", band.left + 380f, band.top + 72f, what)
+		canvas.drawText(Tx.tr("opens the settings panel"), band.left + 380f, band.top + 72f, what)
 
 		val detail = Paint(Paint.ANTI_ALIAS_FLAG).apply {
 			color = Color.argb(190, 200, 210, 230)
 			textSize = 28f
 		}
-		canvas.drawText("Move, resize and sharpen the screen, and click the touchpad.",
+		canvas.drawText(Tx.tr("Move, resize and sharpen the screen, and click the touchpad."),
 				band.left + 40f, band.top + 118f, detail)
-		canvas.drawText("Same chord closes it. You can change it in the launcher.",
+		canvas.drawText(Tx.tr("Same chord closes it. You can change it in the launcher."),
 				band.left + 40f, band.top + 152f, detail)
 
 		xr?.setHudBitmap(bitmap)
@@ -1607,13 +1608,14 @@ class VrStreamActivity: ComponentActivity()
 			textSize = 44f
 			typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
 		}
-		canvas.drawText("Tuning mode", 44f, 78f, title)
+		canvas.drawText(Tx.tr("Tuning mode"), 44f, 78f, title)
 
 		val hint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
 			color = Color.argb(180, 200, 210, 230)
 			textSize = 26f
 		}
-		canvas.drawText("${StreamQualityPrefs.CHORD_NAMES[qualityPrefs.tuningChord]} to leave  ·  the console receives nothing right now",
+		canvas.drawText(Tx.f("{0} to leave  ·  the console receives nothing right now",
+			StreamQualityPrefs.CHORD_NAMES[qualityPrefs.tuningChord]),
 			44f, 116f, hint)
 
 		val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -1626,27 +1628,27 @@ class VrStreamActivity: ComponentActivity()
 			textSize = 30f
 		}
 
-		val filterName = StreamQualityPrefs.SHARPNESS_NAMES[qualityPrefs.sharpness]
+		val filterName = Tx.tr(StreamQualityPrefs.SHARPNESS_NAMES[qualityPrefs.sharpness], "sharp")
 		// Arco em graus e distância em metros: radianos não dizem nada a quem
 		// está olhando para a tela.
-		val shapeName = if(screenPrefs.layerShape == ScreenPrefs.SHAPE_QUAD) "flat" else "curved"
+		val shapeName = Tx.tr(if(screenPrefs.layerShape == ScreenPrefs.SHAPE_QUAD) "flat" else "curved")
 		val rows = listOf(
-			"D-pad ↑↓" to "screen size — ${Math.toDegrees(screenPrefs.centralAngle.toDouble()).toInt()}°"
+			"${Tx.tr("D-pad")} ↑↓" to Tx.f("screen size — {0}°", Math.toDegrees(screenPrefs.centralAngle.toDouble()).toInt())
 					+ nitidezVerdict(),
-			"D-pad ←→" to "distance — %.1f m".format(screenPrefs.radius),
-			"L1 / R1" to "height — %+.2f m".format(screenPrefs.heightOffset),
-			"L2" to "screen shape — $shapeName",
-			"R2" to "curvature — ${curvatureName()}",
-			"Square" to "sharpness — $filterName",
-			"Triangle" to "room — ${if(!screenPrefs.passthroughEnabled) "hidden"
-					else ScreenPrefs.CINEMA_NAMES[screenPrefs.cinema]}",
-			"X" to "recenter the screen in front of you",
-			"Share" to "screen brightness — ${StreamQualityPrefs.BRIGHTNESS_NAMES[qualityPrefs.brightness]}",
+			"${Tx.tr("D-pad")} ←→" to Tx.f("distance — {0} m", "%.1f".format(screenPrefs.radius)),
+			"L1 / R1" to Tx.f("height — {0} m", "%+.2f".format(screenPrefs.heightOffset)),
+			"L2" to Tx.f("screen shape — {0}", shapeName),
+			"R2" to Tx.f("curvature — {0}", curvatureName()),
+			Tx.tr("Square") to Tx.f("sharpness — {0}", filterName),
+			Tx.tr("Triangle") to Tx.f("room — {0}", Tx.tr(if(!screenPrefs.passthroughEnabled) "hidden"
+					else ScreenPrefs.CINEMA_NAMES[screenPrefs.cinema], "cin")),
+			"X" to Tx.tr("recenter the screen in front of you"),
+			"Share" to Tx.f("screen brightness — {0}", Tx.tr(StreamQualityPrefs.BRIGHTNESS_NAMES[qualityPrefs.brightness], "bri")),
 			"Options" to if(qualityPrefs.syntheticStereo)
-					"3D strength — ${(qualityPrefs.stereoStrength * 100).toInt()}%"
-				else "3D is off (turn it on in the launcher)",
-			"PS" to "click the touchpad (map, inventory) and close this",
-			"Circle" to "close this  ·  hold it to end the session"
+					Tx.f("3D strength — {0}%", (qualityPrefs.stereoStrength * 100).toInt())
+				else Tx.tr("3D is off (turn it on in the launcher)"),
+			"PS" to Tx.tr("click the touchpad (map, inventory) and close this"),
+			"Circle" to Tx.tr("close this  ·  hold it to end the session")
 		)
 
 		var y = 178f
@@ -1687,9 +1689,9 @@ class VrStreamActivity: ComponentActivity()
 		val ratio = recWidth.toFloat() / source
 		return when
 		{
-			ratio < 0.92f -> "  ·  can grow (uses %.0f%% of the source)".format(ratio * 100f)
-			ratio > 1.08f -> "  ·  too large (asks for %.0f%% of the source)".format(ratio * 100f)
-			else -> "  ·  just right"
+			ratio < 0.92f -> "  ·  " + Tx.f("can grow (uses {0}% of the source)", "%.0f".format(ratio * 100f))
+			ratio > 1.08f -> "  ·  " + Tx.f("too large (asks for {0}% of the source)", "%.0f".format(ratio * 100f))
+			else -> "  ·  " + Tx.tr("just right")
 		}
 	}
 
@@ -1724,10 +1726,10 @@ class VrStreamActivity: ComponentActivity()
 			lastLost = lost
 			val total = dReceived + dLost
 			val line = if(total == 0L)
-				"no traffic this second"
+				Tx.tr("no traffic this second")
 			else
-				"%.2f%% lost  ·  %d packets/s".format(100.0 * dLost / total, total)
-			canvas.drawText("Network", 44f, y, label)
+				Tx.f("{0}% lost  ·  {1} packets/s", "%.2f".format(100.0 * dLost / total), total)
+			canvas.drawText(Tx.tr("Network"), 44f, y, label)
 			canvas.drawText(line, 250f, y, text)
 			y += 40f
 		}
@@ -1740,8 +1742,8 @@ class VrStreamActivity: ComponentActivity()
 				// Movimento da cabeça até o fóton, medido pelo compositor. É a
 				// metade da latência que é nossa: o resto — rede, codificação,
 				// decodificação — mora do lado do console e do Wi-Fi.
-				canvas.drawText("Latency", 44f, y, label)
-				canvas.drawText("%.1f ms from head to photon".format(perf[12]), 250f, y, text)
+				canvas.drawText(Tx.tr("Latency"), 44f, y, label)
+				canvas.drawText(Tx.f("{0} ms from head to photon", "%.1f".format(perf[12])), 250f, y, text)
 				y += 40f
 			}
 			if(perf[0] > 0f)
@@ -1751,23 +1753,23 @@ class VrStreamActivity: ComponentActivity()
 				val dropped = perf[1].toLong()
 				val delta = (dropped - lastDropped).coerceAtLeast(0L)
 				lastDropped = dropped
-				canvas.drawText("Compositor", 44f, y, label)
-				canvas.drawText(if(delta == 0L) "no dropped frames"
-						else "$delta dropped frame(s)", 250f, y, text)
+				canvas.drawText(Tx.tr("Compositor"), 44f, y, label)
+				canvas.drawText(if(delta == 0L) Tx.tr("no dropped frames")
+						else Tx.f("{0} dropped frame(s)", delta), 250f, y, text)
 				y += 40f
 			}
 			val gpu = StringBuilder()
 			if(perf[2] > 0f)
-				gpu.append("usage %.0f%%".format(perf[3]))
+				gpu.append(Tx.f("usage {0}%", "%.0f".format(perf[3])))
 			if(perf[4] > 0f)
 			{
 				if(gpu.isNotEmpty()) gpu.append("  ·  ")
-				gpu.append("app %.1f ms".format(perf[5]))
+				gpu.append(Tx.f("app {0} ms", "%.1f".format(perf[5])))
 			}
 			if(perf[6] > 0f)
 			{
 				if(gpu.isNotEmpty()) gpu.append("  ·  ")
-				gpu.append("compositor %.1f ms".format(perf[7]))
+				gpu.append(Tx.f("compositor {0} ms", "%.1f".format(perf[7])))
 			}
 			if(perf[13] > 0f)
 			{
@@ -1776,7 +1778,7 @@ class VrStreamActivity: ComponentActivity()
 			}
 			if(gpu.isNotEmpty())
 			{
-				canvas.drawText("Load", 44f, y, label)
+				canvas.drawText(Tx.tr("Load"), 44f, y, label)
 				canvas.drawText(gpu.toString(), 250f, y, text)
 				y += 40f
 			}
@@ -1788,12 +1790,12 @@ class VrStreamActivity: ComponentActivity()
 				// engasgo.
 				val trend = when
 				{
-					perf[10] > 0.01f -> "warming up"
-					perf[10] < -0.01f -> "cooling down"
-					else -> "steady"
+					perf[10] > 0.01f -> Tx.tr("warming up")
+					perf[10] < -0.01f -> Tx.tr("cooling down")
+					else -> Tx.tr("steady")
 				}
-				canvas.drawText("Thermal", 44f, y, label)
-				canvas.drawText("headroom %.0f%%  ·  $trend".format(perf[9] * 100f), 250f, y, text)
+				canvas.drawText(Tx.tr("Thermal"), 44f, y, label)
+				canvas.drawText(Tx.f("headroom {0}%  ·  {1}", "%.0f".format(perf[9] * 100f), trend), 250f, y, text)
 				y += 40f
 			}
 		}

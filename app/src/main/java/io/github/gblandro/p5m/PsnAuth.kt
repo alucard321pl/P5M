@@ -175,7 +175,7 @@ object PsnAuth
 		}
 		catch(e: Exception)
 		{
-			return "A PSN recusou o login: ${e.message}"
+			return "PSN refused the sign-in: ${e.message}"
 		}
 		storeToken(context, json)
 

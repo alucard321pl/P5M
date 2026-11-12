@@ -112,7 +112,7 @@ class StickCalibrationActivity: Activity()
 		}
 
 		root.addView(TextView(this).apply {
-			text = "Stick calibration"
+			text = Tx.tr("Stick calibration")
 			setTextColor(Color.WHITE)
 			setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
 			gravity = Gravity.CENTER
@@ -153,7 +153,7 @@ class StickCalibrationActivity: Activity()
 		}
 		root.addView(veredito)
 
-		botaoMedir = bigButton("Measure (${MEDICAO_MS / 1000} s)") { comecarMedicao() }
+		botaoMedir = bigButton(Tx.f("Measure ({0} s)", MEDICAO_MS / 1000)) { comecarMedicao() }
 		root.addView(botaoMedir)
 
 		// Ajuste na mão por cima da medição: um analógico que treme só de vez
@@ -171,7 +171,7 @@ class StickCalibrationActivity: Activity()
 
 		root.addView(bigButton("Reset to default") {
 			prefs.reset()
-			veredito.text = "Back to the default: centered, ${pct(StickPrefs.DEFAULT_DEADZONE)} deadzone."
+			veredito.text = Tx.f("Back to the default: centered, {0} deadzone.", pct(StickPrefs.DEFAULT_DEADZONE))
 			atualizarRotulos()
 			desenho.invalidate()
 		})
@@ -257,7 +257,7 @@ class StickCalibrationActivity: Activity()
 			terminarMedicao()
 			return
 		}
-		botaoMedir.text = "Measuring… ${(faltam / 1000) + 1} s — hands off"
+		botaoMedir.text = Tx.f("Measuring… {0} s — hands off", (faltam / 1000) + 1)
 		ui.postDelayed({ tique() }, 200)
 	}
 
@@ -265,7 +265,7 @@ class StickCalibrationActivity: Activity()
 	{
 		medindo = false
 		botaoMedir.isEnabled = true
-		botaoMedir.text = "Measure (${MEDICAO_MS / 1000} s)"
+		botaoMedir.text = Tx.f("Measure ({0} s)", MEDICAO_MS / 1000)
 
 		val recadoEsq = concluir("Left", esq) { prefs.left = it }
 		val recadoDir = concluir("Right", dir) { prefs.right = it }
@@ -291,8 +291,8 @@ class StickCalibrationActivity: Activity()
 	private fun concluir(lado: String, a: Amostras, gravar: (StickPrefs.Calibragem) -> Unit): String
 	{
 		if(a.n == 0)
-			return "$lado: no reading — the stick sent nothing. Either it is "
-					.plus("perfectly still, or it stopped reporting. Kept as it was.")
+			return Tx.f("{0}: no reading — the stick sent nothing. Either it is " +
+					"perfectly still, or it stopped reporting. Kept as it was.", Tx.tr(lado))
 
 		val cx = a.somaX / a.n
 		val cy = a.somaY / a.n
@@ -313,16 +313,16 @@ class StickCalibrationActivity: Activity()
 
 		if(abs(cx) > StickPrefs.MAX_CENTER || abs(cy) > StickPrefs.MAX_CENTER ||
 				zona > StickPrefs.MAX_DEADZONE)
-			return "$lado: refused — rest at ${pct(sqrt(cx * cx + cy * cy))}, jitter "
-					.plus("${pct(pior)}. That is a finger on the stick, not wear. ")
-					.plus("Let go and measure again.")
+			return Tx.f("{0}: refused — rest at {1}, jitter {2}. " +
+					"That is a finger on the stick, not wear. Let go and measure again.",
+					Tx.tr(lado), pct(sqrt(cx * cx + cy * cy)), pct(pior))
 
 		gravar(StickPrefs.Calibragem(cx, cy, zona))
 		val desvio = sqrt(cx * cx + cy * cy)
 		Trace.log(this, "Stick calibration $lado: rest ${pct(desvio)}, "
 				+ "jitter ${pct(pior)}, deadzone ${pct(zona)} (${a.n} samples)")
-		return "$lado: rest ${pct(desvio)} off center, jitter ${pct(pior)} → "
-				.plus("deadzone ${pct(zona)}  (${a.n} samples)")
+		return Tx.f("{0}: rest {1} off center, jitter {2} → deadzone {3}  ({4} samples)",
+				Tx.tr(lado), pct(desvio), pct(pior), pct(zona), a.n)
 	}
 
 	private fun ajustar(esquerdo: Boolean, delta: Float)
@@ -331,8 +331,8 @@ class StickCalibrationActivity: Activity()
 		val novo = atual.copy(
 			deadzone = (atual.deadzone + delta).coerceIn(0f, StickPrefs.MAX_DEADZONE))
 		if(esquerdo) prefs.left = novo else prefs.right = novo
-		veredito.text = "${if(esquerdo) "Left" else "Right"} deadzone set by hand to "
-				.plus(pct(novo.deadzone))
+		veredito.text = Tx.f("{0} deadzone set by hand to {1}",
+				Tx.tr(if(esquerdo) "Left" else "Right"), pct(novo.deadzone))
 		atualizarRotulos()
 		desenho.invalidate()
 	}
@@ -348,13 +348,13 @@ class StickCalibrationActivity: Activity()
 	private fun descricao(lado: String, c: StickPrefs.Calibragem): String
 	{
 		val desvio = sqrt(c.centerX * c.centerX + c.centerY * c.centerY)
-		return "$lado\ndeadzone ${pct(c.deadzone)}\n" +
-				(if(c.medido) "center ${pct(desvio)} off" else "not measured yet")
+		return Tx.tr(lado) + "\n" + Tx.f("deadzone {0}", pct(c.deadzone)) + "\n" +
+				(if(c.medido) Tx.f("center {0} off", pct(desvio)) else Tx.tr("not measured yet"))
 	}
 
 	private fun atualizarLeitura()
 	{
-		leitura.text = "raw  L ${leituraDe(lx, ly)}   R ${leituraDe(rx, ry)}"
+		leitura.text = Tx.f("raw  L {0}   R {1}", leituraDe(lx, ly), leituraDe(rx, ry))
 	}
 
 	private fun leituraDe(x: Float, y: Float): String =
@@ -443,7 +443,7 @@ class StickCalibrationActivity: Activity()
 	}
 
 	private fun hint(texto: String) = TextView(this).apply {
-		text = texto
+		text = Tx.tr(texto)
 		setTextColor(Color.parseColor("#9aa0a6"))
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
 		gravity = Gravity.CENTER
@@ -451,7 +451,7 @@ class StickCalibrationActivity: Activity()
 	}
 
 	private fun bigButton(label: String, onClick: () -> Unit) = Button(this).apply {
-		text = label
+		text = Tx.tr(label)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
 		setOnClickListener { onClick() }
 		layoutParams = LinearLayout.LayoutParams(
@@ -461,7 +461,7 @@ class StickCalibrationActivity: Activity()
 	}
 
 	private fun smallButton(label: String, onClick: () -> Unit) = Button(this).apply {
-		text = label
+		text = Tx.tr(label)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
 		setOnClickListener { onClick() }
 		layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT)
