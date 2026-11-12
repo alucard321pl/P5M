@@ -88,6 +88,29 @@ object PsnAuth
 		return fresh
 	}
 
+	/** Idioma da página de login quando o sistema não informa um país. */
+	private const val FALLBACK_LOCALE = "en_US"
+
+	/**
+	 * Idioma da página de login da Sony, no formato `ll_CC` (pl_PL, en_GB,
+	 * pt_BR...), tirado do idioma do sistema.
+	 *
+	 * Antes era `pt_BR` fixo, o que abria a página em português para todo mundo.
+	 * Sem país no locale do sistema (só "pl", por exemplo) não dá para montar um
+	 * `ll_CC` sem chutar, então cai em inglês. Não há como confirmar daqui quais
+	 * combinações a Sony aceita: um valor que ela não conheça deve resultar na
+	 * página padrão dela, mas isso é uma suposição a conferir no aparelho.
+	 */
+	internal fun requestLocale(context: Context): String
+	{
+		val locale = context.resources.configuration.locales[0]
+		val language = locale.language
+		val country = locale.country
+		if(language.isEmpty() || country.isEmpty())
+			return FALLBACK_LOCALE
+		return "${language}_$country"
+	}
+
 	fun loginUrl(context: Context): String?
 	{
 		val duid = clientDuid(context) ?: return null
@@ -97,7 +120,7 @@ object PsnAuth
 				"&client_id=$CLIENT_ID" +
 				"&redirect_uri=$REDIRECT" +
 				"&scope=$SCOPE" +
-				"&request_locale=pt_BR" +
+				"&request_locale=${requestLocale(context)}" +
 				"&ui=pr" +
 				"&service_logo=ps" +
 				"&layout_type=popup" +
