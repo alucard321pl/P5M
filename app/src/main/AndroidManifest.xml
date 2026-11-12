@@ -42,7 +42,7 @@
         android:name="io.github.gblandro.p5m.P5MApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_p5m"
-        android:label="P5M"
+        android:label="P5M-Plus"
         android:isGame="true"
         android:banner="@mipmap/atv_banner"
         android:supportsRtl="true"
@@ -75,7 +75,7 @@
         <meta-data android:name="com.oculus.enable_frame_sync" android:value="true" />
 
         <provider
-            android:authorities="com.metallic.chiaki.fileprovider"
+            android:authorities="${applicationId}.fileprovider"
             android:name="androidx.core.content.FileProvider"
             android:grantUriPermissions="true"
             android:exported="false">
@@ -88,7 +88,7 @@
              Serve para compartilhar o log como ARQUIVO: copiar texto esbarra no
              limite de caracteres de uma issue, anexar arquivo nao. -->
         <provider
-            android:authorities="io.github.gblandro.p5m.diagnostics"
+            android:authorities="${applicationId}.diagnostics"
             android:name="androidx.core.content.FileProvider"
             android:grantUriPermissions="true"
             android:exported="false">

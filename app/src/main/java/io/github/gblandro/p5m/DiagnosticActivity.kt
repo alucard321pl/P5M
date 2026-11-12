@@ -463,7 +463,7 @@ class DiagnosticActivity: Activity()
 			val file = File(dir, "p5m-diagnostics.txt")
 			file.writeText("${deviceInfo()}\n\n${output.text}", Charsets.UTF_8)
 
-			val uri = FileProvider.getUriForFile(this, FILE_PROVIDER_AUTHORITY, file)
+			val uri = FileProvider.getUriForFile(this, "$packageName.diagnostics", file)
 			val intent = Intent(Intent.ACTION_SEND).apply {
 				type = "text/plain"
 				putExtra(Intent.EXTRA_STREAM, uri)
@@ -601,7 +601,6 @@ class DiagnosticActivity: Activity()
 			"extrapolated frame", "glExtrapolateTex2DQCOM", "Cadence:",
 			"E/", "W/P5MVR", "failed", "unavailable"
 		)
-		private const val FILE_PROVIDER_AUTHORITY = "io.github.gblandro.p5m.diagnostics"
 
 		/** Extra que faz a tela ja abrir montando o relatorio. */
 		const val EXTRA_REPORT = "io.github.gblandro.p5m.REPORT"
