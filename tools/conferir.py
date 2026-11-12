@@ -359,6 +359,11 @@ def interface_em_ingles():
                 + glob.glob(os.path.join(ROOT, "app/src/main/cpp/*.cpp")))
     achou = 0
     for f in arquivos:
+        # O dicionario de traducao (polones) tem acentos por definicao: as
+        # chaves sao o ingles que esta no codigo e os valores, a traducao. As
+        # chaves continuam cobertas porque o mesmo texto aparece no codigo.
+        if os.path.basename(f) == "TxPl.kt":
+            continue
         with open(f, encoding="utf-8") as fh:
             for n, linha in enumerate(fh, 1):
                 t = linha.strip()
