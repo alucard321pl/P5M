@@ -116,7 +116,7 @@ class LauncherActivity: Activity()
 			Log.i(TAG, "10-bit: ${prefs.tenBit}")
 		})
 		coluna.addView(linha("Sharpness",
-				{ StreamQualityPrefs.SHARPNESS_NAMES[effectiveSharpness()] }, { sharpHint() }) {
+				{ Tx.tr(StreamQualityPrefs.SHARPNESS_NAMES[effectiveSharpness()], "sharp") }, { sharpHint() }) {
 			prefs.sharpness = if(currentMode() == DisplayMode.WINDOW)
 				(effectiveSharpness() + 1) % 4 else (prefs.sharpness + 1) % 6
 			Log.i(TAG, "Sharpness: ${prefs.sharpness} "
@@ -172,7 +172,7 @@ class LauncherActivity: Activity()
 						PEDIDO_BLUETOOTH)
 		})
 		coluna.addView(linha("Spatial audio",
-				{ if(currentMode() == DisplayMode.WINDOW) "System" else StreamQualityPrefs.SPATIAL_NAMES[prefs.spatialAudio] },
+				{ if(currentMode() == DisplayMode.WINDOW) "System" else Tx.tr(StreamQualityPrefs.SPATIAL_NAMES[prefs.spatialAudio], "audio") },
 				{ audioHint() }, editavel = { currentMode() == DisplayMode.IMMERSIVE }) {
 			prefs.spatialAudio = (prefs.spatialAudio + 1) % 4
 			Log.i(TAG, "Spatial audio: ${prefs.spatialAudio} "
@@ -224,7 +224,7 @@ class LauncherActivity: Activity()
 			setLineSpacing(dp(3).toFloat(), 1f)
 			setPadding(dp(16), dp(13), dp(16), dp(13))
 			background = fundoArredondado(COR_RODAPE)
-			text = "Choose Play to connect, or select a setting to see what it does."
+			text = Tx.tr("Choose Play to connect, or select a setting to see what it does.")
 		}
 
 		status = TextView(this).apply {
@@ -312,8 +312,8 @@ class LauncherActivity: Activity()
 		val botoes = linkedMapOf<String, TextView>()
 		fun selecionar(nome: String) {
 			categoria = nome
-			titulo.text = if(nome == "Play") "Let's play" else nome
-			subtitulo.text = descricoes[nome]
+			titulo.text = Tx.tr(if(nome == "Play") "Let's play" else nome)
+			subtitulo.text = descricoes[nome]?.let { Tx.tr(it) }
 			conteudo.removeAllViews()
 			for(view in paginas.getValue(nome)) conteudo.addView(view)
 			rolagem.scrollTo(0, 0)
@@ -328,7 +328,7 @@ class LauncherActivity: Activity()
 		for(nome in paginas.keys) {
 			val botao = TextView(this).apply {
 				id = View.generateViewId()
-				text = nome
+				text = Tx.tr(nome)
 				textSize = 16f
 				setTypeface(typeface, Typeface.BOLD)
 				gravity = Gravity.CENTER_VERTICAL
@@ -351,7 +351,7 @@ class LauncherActivity: Activity()
 			addView(cabecalho())
 			addView(paines, LinearLayout.LayoutParams(-1, 0, 1f))
 			addView(TextView(context).apply {
-				text = "D-pad / left stick  Navigate    Cross  Select    Circle  Back"
+				text = Tx.tr("D-pad / left stick  Navigate    Cross  Select    Circle  Back")
 				textSize = 12f
 				setTextColor(COR_APAGADA)
 				setPadding(dp(4), dp(12), 0, 0)
@@ -433,8 +433,8 @@ class LauncherActivity: Activity()
 			background = fundoArredondado(COR_DESTAQUE_FUNDO)
 			addView(acorde)
 			addView(TextView(context).apply {
-				text = "While playing, this opens the panel that moves, resizes and "
-						.plus("sharpens the screen, and clicks the touchpad.")
+				text = Tx.tr("While playing, this opens the panel that moves, resizes and "
+						.plus("sharpens the screen, and clicks the touchpad."))
 				setTextColor(COR_TEXTO)
 				setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
 				setLineSpacing(dp(3).toFloat(), 1f)
@@ -470,7 +470,7 @@ class LauncherActivity: Activity()
 
 	/** O aviso de queda tem cor própria: ele não é um ajuste, é uma notícia. */
 	private fun avisoDeQueda() = TextView(this).apply {
-		text = "The app crashed the last time it ran. The reason is in Diagnostics."
+		text = Tx.tr("The app crashed the last time it ran. The reason is in Diagnostics.")
 		setTextColor(COR_ALERTA)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
 		setPadding(dp(18), dp(14), dp(18), dp(14))
@@ -479,7 +479,7 @@ class LauncherActivity: Activity()
 	}
 
 	private fun acaoPrincipal(rotulo: String, onClick: () -> Unit) = TextView(this).apply {
-		text = rotulo
+		text = Tx.tr(rotulo)
 		setTextColor(Color.WHITE)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
 		setTypeface(typeface, Typeface.BOLD)
@@ -498,7 +498,7 @@ class LauncherActivity: Activity()
 
 	private fun acaoSecundaria(rotulo: String, dica: String, onClick: () -> Unit) =
 			TextView(this).apply {
-		text = rotulo
+		text = Tx.tr(rotulo)
 		setTextColor(COR_TEXTO)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
 		gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -514,7 +514,7 @@ class LauncherActivity: Activity()
 	/** Cabeçalho de seção: separa sem pesar. Por isso pequeno, espaçado e apagado. */
 	private fun secao(titulo: String) = TextView(this).apply {
 		tag = titulo
-		text = titulo.uppercase()
+		text = Tx.tr(titulo).uppercase()
 		setTextColor(COR_SECAO)
 		setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
 		setTypeface(typeface, Typeface.BOLD)
@@ -535,7 +535,7 @@ class LauncherActivity: Activity()
 			onClick: () -> Unit): View
 	{
 		val texto = TextView(this).apply {
-			text = rotulo
+			text = Tx.tr(rotulo)
 			setTextColor(COR_TEXTO)
 			setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
 			layoutParams = LinearLayout.LayoutParams(0,
@@ -568,12 +568,12 @@ class LauncherActivity: Activity()
 		}
 		atualizacoes += {
 			val v = valor()
-			valorView.text = v
-			fila.contentDescription = "$rotulo: $v"
+			valorView.text = Tx.tr(v)
+			fila.contentDescription = "${Tx.tr(rotulo)}: ${Tx.tr(v)}"
 			fila.isClickable = editavel()
 			// Valor desligado fica apagado. É o que deixa a lista inteira
 			// legível de relance: o que está ativo salta, o resto recua.
-			valorView.setTextColor(if(v == "off" || v == "off (2D)") COR_APAGADA else COR_ACENTO_CLARO)
+			valorView.setTextColor(if(Tx.isOff(v)) COR_APAGADA else COR_ACENTO_CLARO)
 			fila.visibility = if(visivel()) View.VISIBLE else View.GONE
 		}
 		return fila
@@ -590,7 +590,7 @@ class LauncherActivity: Activity()
 		isClickable = true
 		setOnFocusChangeListener { _, focused -> if(focused) explicar(dica) }
 		addView(TextView(context).apply {
-			text = rotulo
+			text = Tx.tr(rotulo)
 			setTextColor(COR_TEXTO)
 			setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
 			layoutParams = LinearLayout.LayoutParams(0,
@@ -607,7 +607,7 @@ class LauncherActivity: Activity()
 
 	private fun explicar(texto: String)
 	{
-		if(::explicacao.isInitialized) explicacao.text = texto
+		if(::explicacao.isInitialized) explicacao.text = Tx.tr(texto)
 	}
 
 	private fun atualizar()
@@ -751,7 +751,7 @@ class LauncherActivity: Activity()
 			Log.e(TAG, "Failed to open $what", e)
 			P5MApp.saveCrash(this, "launch:$what", e)
 			status.visibility = View.VISIBLE
-			status.text = "Failed to open $what:\n${e::class.java.simpleName}: ${e.message}"
+			status.text = "${Tx.tr("Failed to open")}: ${Tx.tr(what)}\n${e::class.java.simpleName}: ${e.message}"
 		}
 	}
 
