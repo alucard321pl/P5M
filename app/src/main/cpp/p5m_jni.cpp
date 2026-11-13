@@ -202,6 +202,52 @@ JNIEXPORT void JNICALL JNI_FCN(nativeSetHudBitmap)(JNIEnv *env, jobject, jlong p
 	AndroidBitmap_unlockPixels(env, bitmap);
 }
 
+JNIEXPORT void JNICALL JNI_FCN(nativeSetEnvBitmap)(JNIEnv *env, jobject, jlong ptr,
+		jobject bitmap)
+{
+	if(!ptr || !bitmap)
+		return;
+
+	AndroidBitmapInfo info{};
+	if(AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS)
+	{
+		LOGE("AndroidBitmap_getInfo failed (cinema room)");
+		return;
+	}
+	if(info.format != ANDROID_BITMAP_FORMAT_RGBA_8888)
+	{
+		LOGE("The cinema room needs ARGB_8888, got format %d", (int)info.format);
+		return;
+	}
+	if(info.stride != info.width * 4)
+	{
+		LOGE("The cinema room bitmap has row padding (stride %u)", (unsigned)info.stride);
+		return;
+	}
+
+	void *pixels = nullptr;
+	if(AndroidBitmap_lockPixels(env, bitmap, &pixels) != ANDROID_BITMAP_RESULT_SUCCESS)
+	{
+		LOGE("AndroidBitmap_lockPixels failed (cinema room)");
+		return;
+	}
+	Handle(ptr)->SetEnvBitmap(static_cast<const uint8_t *>(pixels), (int32_t)info.width,
+			(int32_t)info.height);
+	AndroidBitmap_unlockPixels(env, bitmap);
+}
+
+JNIEXPORT void JNICALL JNI_FCN(nativeSetCinemaRoom)(JNIEnv *, jobject, jlong ptr,
+		jboolean enabled)
+{
+	if(ptr)
+		Handle(ptr)->SetCinemaRoom(enabled == JNI_TRUE);
+}
+
+JNIEXPORT jboolean JNICALL JNI_FCN(nativeIsCinemaRoomSupported)(JNIEnv *, jobject, jlong ptr)
+{
+	return (ptr && Handle(ptr)->CinemaRoomSupported()) ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT void JNICALL JNI_FCN(nativeSetHudVisible)(JNIEnv *, jobject, jlong ptr,
 		jboolean visible)
 {

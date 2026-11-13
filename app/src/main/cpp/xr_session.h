@@ -334,6 +334,20 @@ public:
 	void SetHudVisible(bool visible) { hud_visible_ = visible; }
 
 	/**
+	 * Sala de cinema: um fundo 360 opaco no lugar do passthrough.
+	 *
+	 * A imagem (equiretangular, RGBA, 3072x1536) e desenhada pelo lado Kotlin e
+	 * sobe uma vez so: o fundo e estatico, entao o frame loop faz o upload no
+	 * primeiro quadro em que a sala esta ligada e depois so reenvia a camada.
+	 * Pode ser chamada de qualquer thread.
+	 */
+	void SetEnvBitmap(const uint8_t *pixels, int32_t width, int32_t height);
+	void SetCinemaRoom(bool enabled) { cinema_room_ = enabled; }
+	// Falso quando o runtime nao tem XR_KHR_composition_layer_equirect2 ou
+	// recusou o swapchain: quem chama deve cair para o passthrough.
+	bool CinemaRoomSupported() const { return env_supported_; }
+
+	/**
 	 * Escolhe a taxa de atualizacao do painel.
 	 *
 	 * Nao e "quanto maior melhor": com fonte de 60 fps, 120 Hz e multiplo exato
@@ -361,6 +375,7 @@ private:
 	bool InitPassthrough();
 	void ApplyColorSpace();
 	bool InitHudSwapchain();
+	bool InitEnvSwapchain();
 	bool CreateGlVideoSwapchain(int32_t width, int32_t height);
 	void LogGlCapabilities();
 	void ApplyPerformanceLevels();
@@ -371,6 +386,8 @@ private:
 	// Devolve false quando nao ha o que compor; so entao a camada e omitida.
 	// Nao recebe ScreenParams: o painel tem posicao fixa, independente da tela.
 	bool UpdateHudLayer(XrCompositionLayerQuad &layer, float yaw);
+	// Devolve false enquanto a imagem da sala ainda nao chegou ou subiu.
+	bool UpdateEnvLayer(XrCompositionLayerEquirect2KHR &layer, float yaw);
 	void PollEvents();
 	void RenderFrame();
 	void FrameLoop();
@@ -423,6 +440,20 @@ private:
 	std::mutex hud_mutex_;
 	std::vector<uint8_t> hud_pixels_;
 	std::atomic<bool> hud_visible_{false};
+
+	// Sala de cinema (ver SetEnvBitmap). Criado junto com o do painel, com o
+	// contexto GL ainda corrente: depois da soltura o runtime recusa.
+	XrSwapchain env_swapchain_ = XR_NULL_HANDLE;
+	std::vector<XrSwapchainImageOpenGLESKHR> env_images_;
+	int32_t env_width_ = 0;
+	int32_t env_height_ = 0;
+	std::mutex env_mutex_;
+	std::vector<uint8_t> env_pixels_;
+	bool env_static_ = false;   // swapchain de imagem unica
+	bool env_ready_ = false;    // ja subiu para a GPU
+	std::atomic<bool> env_supported_{false};
+	std::atomic<bool> cinema_room_{false};
+	bool equirect2_supported_ = false;
 
 	XrPassthroughFB passthrough_ = XR_NULL_HANDLE;
 	XrPassthroughLayerFB passthrough_layer_ = XR_NULL_HANDLE;

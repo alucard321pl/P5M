@@ -25,6 +25,10 @@ class XrBridge(private val activity: Activity)
 	val isPassthroughSupported: Boolean
 		get() = nativePtr != 0L && nativeIsPassthroughSupported(nativePtr)
 
+	/** Falso quando o runtime nao tem a camada equiretangular da sala de cinema. */
+	val isCinemaRoomSupported: Boolean
+		get() = nativePtr != 0L && nativeIsCinemaRoomSupported(nativePtr)
+
 	/** Cria instancia, sistema e sessao OpenXR. Retorna false se o runtime nao atender. */
 	fun create(): Boolean
 	{
@@ -260,6 +264,20 @@ class XrBridge(private val activity: Activity)
 			nativeSetHudVisible(nativePtr, visible)
 	}
 
+	/** Sobe o fundo da sala de cinema (3072x1536, ARGB_8888, sem padding). */
+	fun setEnvBitmap(bitmap: Bitmap)
+	{
+		if(nativePtr != 0L)
+			nativeSetEnvBitmap(nativePtr, bitmap)
+	}
+
+	/** Liga a sala no lugar do passthrough. O fundo precisa ter subido antes. */
+	fun setCinemaRoom(enabled: Boolean)
+	{
+		if(nativePtr != 0L)
+			nativeSetCinemaRoom(nativePtr, enabled)
+	}
+
 	fun setPassthrough(enabled: Boolean)
 	{
 		if(nativePtr != 0L)
@@ -310,6 +328,9 @@ class XrBridge(private val activity: Activity)
 	private external fun nativeSetHudBitmap(ptr: Long, bitmap: Bitmap)
 	private external fun nativeSetHudVisible(ptr: Long, visible: Boolean)
 	private external fun nativeSetPassthrough(ptr: Long, enabled: Boolean)
+	private external fun nativeSetEnvBitmap(ptr: Long, bitmap: Bitmap)
+	private external fun nativeSetCinemaRoom(ptr: Long, enabled: Boolean)
+	private external fun nativeIsCinemaRoomSupported(ptr: Long): Boolean
 	private external fun nativeIsPassthroughSupported(ptr: Long): Boolean
 	private external fun nativeRecenter(ptr: Long)
 	private external fun nativeDestroy(ptr: Long)

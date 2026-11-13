@@ -9,6 +9,7 @@
 // AspectRatioFrameLayout -- que o viewBinding referencia -- depende dele.
 package com.metallic.chiaki.stream
 
+import io.github.gblandro.p5m.CinemaRoom
 import io.github.gblandro.p5m.Tx
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -399,7 +400,7 @@ class VrStreamActivity: ComponentActivity()
 
 		applyScreenParams()
 		applyQualityParams()
-		bridge.setPassthrough(screenPrefs.passthroughEnabled && bridge.isPassthroughSupported)
+		applyRoom()
 
 		// 60 fps de fonte pede 120 Hz de painel: múltiplo exato, cadência
 		// uniforme. Ver SelectDisplayRefreshRate no lado nativo.
@@ -612,6 +613,53 @@ class VrStreamActivity: ComponentActivity()
 			gravity = Gravity.CENTER
 			setPadding(64, 64, 64, 64)
 		})
+	}
+
+	private var roomStarted = false
+
+	/**
+	 * Liga a sala de cinema no lugar do passthrough, ou volta ao passthrough.
+	 *
+	 * Os dois sao exclusivos: a sala e um fundo opaco, e o passthrough atras
+	 * dela so gastaria camera. O passthrough so volta quando a sala sai.
+	 */
+	private fun applyRoom()
+	{
+		val bridge = xr ?: return
+		val room = screenPrefs.cinemaRoom && bridge.isCinemaRoomSupported
+		bridge.setCinemaRoom(room)
+		bridge.setPassthrough(screenPrefs.passthroughEnabled && !room && bridge.isPassthroughSupported)
+		if(room)
+			ensureCinemaRoom()
+	}
+
+	/**
+	 * Desenha a sala uma vez por sessao, fora da thread principal: sao alguns
+	 * milhoes de raios, e travar o quadro por segundos no meio do jogo nao e
+	 * opcao. Ate ficar pronta, a sala aparece escura.
+	 */
+	private fun ensureCinemaRoom()
+	{
+		if(roomStarted)
+			return
+		roomStarted = true
+		Thread({
+			try
+			{
+				val t0 = System.nanoTime()
+				val bitmap = CinemaRoom.render()
+				Log.i(TAG, "Cinema room drawn in ${(System.nanoTime() - t0) / 1_000_000} ms")
+				runOnUiThread {
+					xr?.setEnvBitmap(bitmap)
+					bitmap.recycle()
+				}
+			}
+			catch(e: Throwable)
+			{
+				Log.w(TAG, "Cinema room failed: ${e::class.java.simpleName}: ${e.message}")
+				roomStarted = false
+			}
+		}, "p5m-cinema-room").start()
 	}
 
 	private fun applyQualityParams()
@@ -1373,14 +1421,20 @@ class VrStreamActivity: ComponentActivity()
 			KeyEvent.KEYCODE_BUTTON_Y -> // Triângulo: quanto do quarto aparece
 			{
 				val bridge = xr
-				if(bridge != null && bridge.isPassthroughSupported)
+				if(bridge != null && (bridge.isPassthroughSupported || bridge.isCinemaRoomSupported))
 				{
-					// Cinco estados num botão só, porque é tudo a mesma
-					// pergunta: desligado → normal → suave → médio → forte.
-					// Separar "ligar o passthrough" de "escurecer o
-					// passthrough" em dois botões daria dois botões para
-					// escolher uma coisa.
-					if(!screenPrefs.passthroughEnabled)
+					// Seis estados num botão só, porque é tudo a mesma
+					// pergunta: sala → escuro → normal → suave → médio → forte
+					// → sala. Separar "ligar o passthrough" de "escurecer o
+					// passthrough" de "trocar o quarto pela sala" em botões
+					// distintos daria três botões para escolher uma coisa.
+					if(screenPrefs.cinemaRoom)
+					{
+						screenPrefs.cinemaRoom = false
+						screenPrefs.passthroughEnabled = false
+						screenPrefs.cinema = 0
+					}
+					else if(!screenPrefs.passthroughEnabled)
 					{
 						screenPrefs.passthroughEnabled = true
 						screenPrefs.cinema = 0
@@ -1389,14 +1443,17 @@ class VrStreamActivity: ComponentActivity()
 					{
 						screenPrefs.passthroughEnabled = false
 						screenPrefs.cinema = 0
+						if(bridge.isCinemaRoomSupported)
+							screenPrefs.cinemaRoom = true
 					}
 					else
 						screenPrefs.cinema += 1
 
-					bridge.setPassthrough(screenPrefs.passthroughEnabled)
+					applyRoom()
 					applyQualityParams()
 					Log.i(TAG, "Passthrough: ${screenPrefs.passthroughEnabled}, "
-							+ "cinema ${ScreenPrefs.CINEMA_NAMES[screenPrefs.cinema]}")
+							+ "cinema ${ScreenPrefs.CINEMA_NAMES[screenPrefs.cinema]}, "
+							+ "room ${screenPrefs.cinemaRoom}")
 				}
 			}
 			KeyEvent.KEYCODE_BUTTON_X -> // Square: cicla a nitidez
@@ -1640,7 +1697,8 @@ class VrStreamActivity: ComponentActivity()
 			"L2" to Tx.f("screen shape — {0}", shapeName),
 			"R2" to Tx.f("curvature — {0}", curvatureName()),
 			Tx.tr("Square") to Tx.f("sharpness — {0}", filterName),
-			Tx.tr("Triangle") to Tx.f("room — {0}", Tx.tr(if(!screenPrefs.passthroughEnabled) "hidden"
+			Tx.tr("Triangle") to Tx.f("room — {0}", Tx.tr(if(screenPrefs.cinemaRoom) "hall"
+					else if(!screenPrefs.passthroughEnabled) "hidden"
 					else ScreenPrefs.CINEMA_NAMES[screenPrefs.cinema], "cin")),
 			"X" to Tx.tr("recenter the screen in front of you"),
 			"Share" to Tx.f("screen brightness — {0}", Tx.tr(StreamQualityPrefs.BRIGHTNESS_NAMES[qualityPrefs.brightness], "bri")),

@@ -126,9 +126,10 @@ class LauncherActivity: Activity()
 		// Acao e nao ajuste: grava os valores do preset e deixa o painel em
 		// jogo refina-los. Vale so no modo imersivo, onde existe tela propria.
 		coluna.addView(navegacao("Cinema preset",
-				"Sets a flat 60° screen at 3.5 m, eye height, with the room in passthrough at "
-						+ "the darkest level. Applies to immersive mode; fine-tune in game with "
-						+ "the settings chord; Triangle there cycles how much of the room shows.") {
+				"Puts a flat 60° screen at 3.5 m, eye height, inside a virtual cinema hall: "
+						+ "dark walls, curtains and rows of seats instead of your room. Applies to "
+						+ "immersive mode; fine-tune in game with the settings chord; Triangle there "
+						+ "cycles hall, dark, and your room at each dimming level.") {
 			ScreenPrefs(this).applyCinemaPreset()
 			Log.i(TAG, "Cinema preset applied")
 			explicar("Cinema preset applied. Start a stream in immersive mode to see it.")

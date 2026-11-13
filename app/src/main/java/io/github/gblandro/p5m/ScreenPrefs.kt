@@ -55,6 +55,18 @@ class ScreenPrefs(context: Context)
 		set(value) { prefs.edit().putInt(KEY_CINEMA, value.coerceIn(0, 3)).apply() }
 
 	/**
+	 * Sala de cinema: um fundo 360 desenhado por codigo ([CinemaRoom]) no lugar
+	 * do passthrough. Ligada, o quarto some e a tela fica numa sala escura, com
+	 * cortinas, poltronas e luzes; o passthrough nao aparece enquanto ela
+	 * estiver ligada. Triangulo, em jogo, passa por ela no ciclo da "sala".
+	 *
+	 * Desligada por padrao: so o preset de cinema a liga.
+	 */
+	var cinemaRoom: Boolean
+		get() = prefs.getBoolean(KEY_CINEMA_ROOM, false)
+		set(value) { prefs.edit().putBoolean(KEY_CINEMA_ROOM, value).apply() }
+
+	/**
 	 * Forma da tela: 0 = cilindro (curva), 1 = quad (plana).
 	 *
 	 * Plana por padrão, por preferência de uso. L2 alterna em jogo.
@@ -89,7 +101,7 @@ class ScreenPrefs(context: Context)
 
 	/**
 	 * Preset "sala de cinema": tela plana de ~60 graus a 3,5 m, na altura dos
-	 * olhos, com o quarto no passthrough no degrau mais escuro.
+	 * olhos, dentro da sala de cinema virtual.
 	 *
 	 * Grava so os valores que o jogador ja ajusta em jogo (distancia, arco,
 	 * altura, forma, passthrough e modo cinema), entao qualquer um deles pode
@@ -101,8 +113,11 @@ class ScreenPrefs(context: Context)
 		radius = CINEMA_PRESET_RADIUS
 		centralAngle = CINEMA_PRESET_ANGLE
 		heightOffset = 0f
+		// O passthrough no degrau mais escuro fica de reserva: se o aparelho
+		// nao der a sala, e o que se ve no lugar dela.
 		passthroughEnabled = true
 		cinema = CINEMA_NAMES.size - 1
+		cinemaRoom = true
 	}
 
 	companion object
@@ -147,6 +162,7 @@ class ScreenPrefs(context: Context)
 		private const val KEY_HEIGHT = "height_offset"
 		private const val KEY_PASSTHROUGH = "passthrough"
 		private const val KEY_CINEMA = "cinema"
+		private const val KEY_CINEMA_ROOM = "cinema_room"
 
 		// 4 m e ~70 graus: tela grande sem forcar convergencia, confortavel por horas.
 		const val DEFAULT_RADIUS = 4.0f

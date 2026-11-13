@@ -46,6 +46,10 @@ constexpr int32_t kHudHeight = 768;
 // Posicao fixa do painel, em metros. 1,5 m e distancia de leitura confortavel,
 // e 0,95 m de largura da cerca de 35 graus -- grande o bastante para ler as
 // linhas sem cobrir a tela do jogo atras.
+// Fundo da sala de cinema: uma imagem equiretangular de 360x180 graus.
+constexpr int32_t kEnvWidth = 3072;
+constexpr int32_t kEnvHeight = 1536;
+
 constexpr float kHudDistance = 1.5f;
 constexpr float kHudWidth1M = 0.95f;
 constexpr float kHudHeightOffset = -0.3f;
@@ -213,6 +217,15 @@ bool XrVideoSession::Create(JavaVM *vm, jobject activity)
 	}
 	else
 		LOGW("XR_FB_composition_layer_image_layout unavailable; the image will be mirrored");
+
+	// Esfera inteira numa camada so: e o que carrega o fundo da sala de cinema.
+	if(has_ext(XR_KHR_COMPOSITION_LAYER_EQUIRECT2_EXTENSION_NAME))
+	{
+		equirect2_supported_ = true;
+		extensions.push_back(XR_KHR_COMPOSITION_LAYER_EQUIRECT2_EXTENSION_NAME);
+	}
+	else
+		LOGW("XR_KHR_composition_layer_equirect2 unavailable; no cinema room");
 
 	if(has_ext(XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME))
 	{
@@ -454,6 +467,11 @@ bool XrVideoSession::Create(JavaVM *vm, jobject activity)
 	// contexto, e o swapchain de video escapava por ser Surface e nao GL.
 	if(!InitHudSwapchain())
 		LOGW("Help panel unavailable; tuning mode will have no caption");
+	// Mesma razao: swapchain GL so nasce com o contexto corrente.
+	if(InitEnvSwapchain())
+		env_supported_ = true;
+	else
+		LOGW("Cinema room unavailable; the launcher preset falls back to passthrough");
 
 	// Solta o contexto nesta thread. Ele foi criado e ficou corrente aqui para
 	// abrir a sessao, mas quem vai usa-lo e a thread do frame loop -- e o EGL
@@ -896,6 +914,193 @@ bool XrVideoSession::UpdateHudLayer(XrCompositionLayerQuad &layer, float yaw)
 		kHudHeightOffset,
 		-std::cos(yaw) * kHudDistance
 	};
+	return true;
+}
+
+bool XrVideoSession::InitEnvSwapchain()
+{
+	if(!equirect2_supported_)
+		return false;
+
+	uint32_t format_count = 0;
+	if(XR_FAILED(xrEnumerateSwapchainFormats(session_, 0, &format_count, nullptr))
+			|| format_count == 0)
+		return false;
+	std::vector<int64_t> formats(format_count);
+	if(XR_FAILED(xrEnumerateSwapchainFormats(session_, format_count, &format_count,
+			formats.data())))
+		return false;
+
+	// Mesma escolha do painel: sRGB primeiro, para a sala sair com o brilho em
+	// que foi desenhada.
+	const int64_t kSrgb8Alpha8 = 0x8C43;
+	const int64_t kRgba8 = 0x8058;
+	int64_t chosen = 0;
+	for(int64_t candidate : { kSrgb8Alpha8, kRgba8 })
+	{
+		for(int64_t f : formats)
+		{
+			if(f == candidate)
+			{
+				chosen = candidate;
+				break;
+			}
+		}
+		if(chosen != 0)
+			break;
+	}
+	if(chosen == 0)
+	{
+		LOGW("No 8-bit RGBA format for the cinema room");
+		return false;
+	}
+
+	// Combinacoes de uso como no painel (o runtime ja recusou uma delas sem
+	// dizer o que nao gostou), cada uma primeiro como imagem unica -- o fundo
+	// nunca muda, entao uma imagem basta e poupa duas na GPU -- e depois em
+	// rodizio.
+	const struct { XrSwapchainUsageFlags usage; const char *name; } kUsages[] = {
+		{ XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+				"SAMPLED|COLOR_ATTACHMENT" },
+		{ XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT
+				| XR_SWAPCHAIN_USAGE_TRANSFER_DST_BIT, "SAMPLED|COLOR_ATTACHMENT|TRANSFER_DST" },
+		{ XR_SWAPCHAIN_USAGE_SAMPLED_BIT, "SAMPLED" },
+	};
+	const struct { XrSwapchainCreateFlags flags; bool is_static; const char *name; } kModes[] = {
+		{ XR_SWAPCHAIN_CREATE_STATIC_IMAGE_BIT, true, "static" },
+		{ 0, false, "rotating" },
+	};
+
+	XrResult res = XR_ERROR_RUNTIME_FAILURE;
+	for(const auto &usage : kUsages)
+	{
+		for(const auto &mode : kModes)
+		{
+			XrSwapchainCreateInfo info{XR_TYPE_SWAPCHAIN_CREATE_INFO};
+			info.createFlags = mode.flags;
+			info.usageFlags = usage.usage;
+			info.format = chosen;
+			info.sampleCount = 1;
+			info.width = (uint32_t)kEnvWidth;
+			info.height = (uint32_t)kEnvHeight;
+			info.faceCount = 1;
+			info.arraySize = 1;
+			info.mipCount = 1;
+			res = xrCreateSwapchain(session_, &info, &env_swapchain_);
+			if(XR_SUCCEEDED(res))
+			{
+				env_static_ = mode.is_static;
+				LOGI("Cinema room: usage %s, %s image accepted", usage.name, mode.name);
+				break;
+			}
+			LOGW("Cinema room: usage %s, %s refused (%s)", usage.name, mode.name,
+					XrResultStr(instance_, res));
+			env_swapchain_ = XR_NULL_HANDLE;
+		}
+		if(XR_SUCCEEDED(res))
+			break;
+	}
+	if(XR_FAILED(res))
+		return false;
+
+	uint32_t image_count = 0;
+	if(XR_FAILED(xrEnumerateSwapchainImages(env_swapchain_, 0, &image_count, nullptr))
+			|| image_count == 0)
+		return false;
+	env_images_.assign(image_count, {XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
+	if(XR_FAILED(xrEnumerateSwapchainImages(env_swapchain_, image_count, &image_count,
+			reinterpret_cast<XrSwapchainImageBaseHeader *>(env_images_.data()))))
+		return false;
+
+	LOGI("Cinema room: %dx%d, format 0x%llx, %u images", kEnvWidth, kEnvHeight,
+			(unsigned long long)chosen, image_count);
+	return true;
+}
+
+void XrVideoSession::SetEnvBitmap(const uint8_t *pixels, int32_t width, int32_t height)
+{
+	if(!pixels || width != kEnvWidth || height != kEnvHeight)
+	{
+		LOGW("Cinema room bitmap ignored (%dx%d, expected %dx%d)", (int)width, (int)height,
+				(int)kEnvWidth, (int)kEnvHeight);
+		return;
+	}
+	std::lock_guard<std::mutex> lock(env_mutex_);
+	env_width_ = width;
+	env_height_ = height;
+	env_pixels_.assign(pixels, pixels + (size_t)width * height * 4);
+}
+
+bool XrVideoSession::UpdateEnvLayer(XrCompositionLayerEquirect2KHR &layer, float yaw)
+{
+	if(env_swapchain_ == XR_NULL_HANDLE || env_images_.empty())
+		return false;
+
+	if(!env_ready_)
+	{
+		std::vector<uint8_t> pixels;
+		{
+			std::lock_guard<std::mutex> lock(env_mutex_);
+			if(env_pixels_.empty() || env_width_ != kEnvWidth || env_height_ != kEnvHeight)
+				return false;
+			pixels.swap(env_pixels_);
+		}
+
+		// Uma imagem so na versao estatica; no rodizio, o mesmo conteudo em
+		// todas, porque depois do upload a camada nao readquire nada e o
+		// runtime usa a ultima liberada.
+		const size_t rounds = env_static_ ? 1 : env_images_.size();
+		bool ok = true;
+		for(size_t n = 0; n < rounds && ok; ++n)
+		{
+			uint32_t index = 0;
+			XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+			if(XR_FAILED(xrAcquireSwapchainImage(env_swapchain_, &acquire, &index)))
+			{
+				ok = false;
+				break;
+			}
+			XrSwapchainImageWaitInfo wait{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+			wait.timeout = XR_INFINITE_DURATION;
+			if(XR_SUCCEEDED(xrWaitSwapchainImage(env_swapchain_, &wait)) && index < env_images_.size())
+			{
+				glBindTexture(GL_TEXTURE_2D, env_images_[index].image);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kEnvWidth, kEnvHeight,
+						GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+				glBindTexture(GL_TEXTURE_2D, 0);
+			}
+			else
+				ok = false;
+			XrSwapchainImageReleaseInfo release{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+			xrReleaseSwapchainImage(env_swapchain_, &release);
+		}
+		if(!ok)
+		{
+			LOGW("Cinema room upload failed; the room stays dark");
+			return false;
+		}
+		env_ready_ = true;
+		LOGI("Cinema room uploaded (%u image(s))", (unsigned)rounds);
+	}
+
+	layer.type = XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR;
+	layer.layerFlags = 0;
+	layer.space = app_space_;
+	layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+	layer.subImage.swapchain = env_swapchain_;
+	layer.subImage.imageRect.offset = XrOffset2Di{0, 0};
+	layer.subImage.imageRect.extent = XrExtent2Di{kEnvWidth, kEnvHeight};
+	layer.subImage.imageArrayIndex = 0;
+
+	// O centro da imagem e a parede da frente (-Z). Gira com o yaw da
+	// recentragem, para a tela ficar sempre diante da parede do fundo da sala.
+	// Raio 0 e distancia infinita: sem paralaxe, a sala nao "anda" com a cabeca.
+	layer.pose.orientation = QuatFromYaw(yaw);
+	layer.pose.position = XrVector3f{0.0f, 0.0f, 0.0f};
+	layer.radius = 0.0f;
+	layer.centralHorizontalAngle = 2.0f * 3.14159265f;
+	layer.upperVerticalAngle = 0.5f * 3.14159265f;
+	layer.lowerVerticalAngle = -0.5f * 3.14159265f;
 	return true;
 }
 
@@ -1967,8 +2172,35 @@ void XrVideoSession::RenderFrame()
 
 	std::vector<const XrCompositionLayerBaseHeader *> layers;
 
+	// A sala de cinema entra primeiro, no fundo, e dispensa o passthrough: as
+	// duas coisas respondem a mesma pergunta, "o que ha atras da tela".
+	XrCompositionLayerEquirect2KHR env_layer{XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR};
+	XrCompositionLayerImageLayoutFB env_layout{XR_TYPE_COMPOSITION_LAYER_IMAGE_LAYOUT_FB};
+	const bool room_on = cinema_room_.load() && env_supported_.load();
+	if(room_on)
+	{
+		ScreenParams room_params;
+		XrQuaternionf room_recenter;
+		{
+			std::lock_guard<std::mutex> lock(params_mutex_);
+			room_params = params_;
+			room_recenter = recenter_orientation_;
+		}
+		if(UpdateEnvLayer(env_layer, YawFromQuat(room_recenter) + room_params.yawOffset))
+		{
+			// Mesma convencao de origem do painel: a imagem foi desenhada de
+			// cima para baixo.
+			if(image_layout_supported_ && vertical_flip_.load())
+			{
+				env_layout.flags = XR_COMPOSITION_LAYER_IMAGE_LAYOUT_VERTICAL_FLIP_BIT_FB;
+				env_layer.next = &env_layout;
+			}
+			layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader *>(&env_layer));
+		}
+	}
+
 	XrCompositionLayerPassthroughFB passthrough_layer_info{XR_TYPE_COMPOSITION_LAYER_PASSTHROUGH_FB};
-	if(passthrough_supported_ && passthrough_enabled_)
+	if(passthrough_supported_ && passthrough_enabled_ && !room_on)
 	{
 		passthrough_layer_info.flags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 		passthrough_layer_info.space = XR_NULL_HANDLE;
@@ -2399,6 +2631,13 @@ void XrVideoSession::Destroy()
 		xrDestroySwapchain(hud_swapchain_);
 	hud_swapchain_ = XR_NULL_HANDLE;
 	hud_images_.clear();
+
+	if(env_swapchain_ != XR_NULL_HANDLE)
+		xrDestroySwapchain(env_swapchain_);
+	env_swapchain_ = XR_NULL_HANDLE;
+	env_images_.clear();
+	env_supported_ = false;
+	env_ready_ = false;
 
 	if(app_space_ != XR_NULL_HANDLE)
 		xrDestroySpace(app_space_);

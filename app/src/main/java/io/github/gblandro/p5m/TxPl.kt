@@ -48,7 +48,7 @@ internal val PL_STRINGS: Map<String, String> = mapOf(
 	"on" to "wł.",
 	"off" to "wył.",
 	"Cinema preset" to "Preset kinowy",
-	"Sets a flat 60° screen at 3.5 m, eye height, with the room in passthrough at the darkest level. Applies to immersive mode; fine-tune in game with the settings chord; Triangle there cycles how much of the room shows." to "Ustawia płaski ekran 60° w odległości 3,5 m, na wysokości oczu, z pokojem w passthrough na najciemniejszym poziomie. Działa w trybie immersyjnym; dopracujesz to w grze skrótem ustawień, a Trójkąt przełącza tam, ile pokoju widać.",
+	"Puts a flat 60° screen at 3.5 m, eye height, inside a virtual cinema hall: dark walls, curtains and rows of seats instead of your room. Applies to immersive mode; fine-tune in game with the settings chord; Triangle there cycles hall, dark, and your room at each dimming level." to "Ustawia płaski ekran 60° w odległości 3,5 m, na wysokości oczu, wewnątrz wirtualnej sali kinowej: ciemne ściany, kurtyny i rzędy foteli zamiast Twojego pokoju. Działa w trybie immersyjnym; dopracujesz to w grze skrótem ustawień, a Trójkąt przełącza tam: salę, ciemność i Twój pokój na kolejnych poziomach przyciemnienia.",
 	"Cinema preset applied. Start a stream in immersive mode to see it." to "Zastosowano preset kinowy. Uruchom stream w trybie immersyjnym, aby go zobaczyć.",
 	"Emulated 3D" to "Emulowane 3D",
 	"Strength" to "Siła",
@@ -246,4 +246,6 @@ internal val PL_STRINGS: Map<String, String> = mapOf(
 	"Failed to create the chiaki session." to "Nie udało się utworzyć sesji chiaki.",
 	"The remote connection through PSN failed." to "Połączenie zdalne przez PSN nie powiodło się.",
 	"The console has to be on, or in rest mode with Remote Play enabled." to "Konsola musi być włączona albo w trybie czuwania z włączonym Remote Play.",
-	"PSN returned an account id that is not numeric" to "PSN zwróciło identyfikator konta, który nie jest liczbą")
+	"PSN returned an account id that is not numeric" to "PSN zwróciło identyfikator konta, który nie jest liczbą",
+	"cin:hall" to "sala kinowa"
+)
