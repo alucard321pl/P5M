@@ -125,11 +125,17 @@ class LauncherActivity: Activity()
 
 		// Acao e nao ajuste: grava os valores do preset e deixa o painel em
 		// jogo refina-los. Vale so no modo imersivo, onde existe tela propria.
+		coluna.addView(linha("Room", { ScreenPrefs(this).let { ScreenPrefs.ROOM_NAMES[it.roomStyle] } },
+				{ "Which virtual room the Cinema preset puts you in: Cinema (dark hall with curtains and seats) or Horror (abandoned tiled cell with chains, rust and a puddle). Takes effect the next time you start a stream." }) {
+			val sp = ScreenPrefs(this)
+			sp.roomStyle = (sp.roomStyle + 1) % ScreenPrefs.ROOM_NAMES.size
+			Log.i(TAG, "Room style: ${ScreenPrefs.ROOM_NAMES[sp.roomStyle]}")
+		})
 		coluna.addView(navegacao("Cinema preset",
-				"Puts a flat 60° screen at 3.5 m, eye height, inside a virtual cinema hall: "
-						+ "dark walls, curtains and rows of seats instead of your room. Applies to "
+				"Puts a flat 60° screen at 3.5 m, eye height, inside the selected virtual room "
+						+ "(see Room above) instead of your room. Applies to "
 						+ "immersive mode; fine-tune in game with the settings chord; Triangle there "
-						+ "cycles hall, dark, and your room at each dimming level.") {
+						+ "cycles room, dark, and your room at each dimming level.") {
 			ScreenPrefs(this).applyCinemaPreset()
 			Log.i(TAG, "Cinema preset applied")
 			explicar("Cinema preset applied. Start a stream in immersive mode to see it.")

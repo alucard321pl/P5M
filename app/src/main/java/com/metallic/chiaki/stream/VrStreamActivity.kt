@@ -643,12 +643,13 @@ class VrStreamActivity: ComponentActivity()
 		if(roomStarted)
 			return
 		roomStarted = true
+		val style = screenPrefs.roomStyle
 		Thread({
 			try
 			{
 				val t0 = System.nanoTime()
-				val bitmap = CinemaRoom.render()
-				Log.i(TAG, "Cinema room drawn in ${(System.nanoTime() - t0) / 1_000_000} ms")
+				val bitmap = CinemaRoom.render(style)
+				Log.i(TAG, "Room ${ScreenPrefs.ROOM_NAMES[style]} drawn in ${(System.nanoTime() - t0) / 1_000_000} ms")
 				runOnUiThread {
 					xr?.setEnvBitmap(bitmap)
 					bitmap.recycle()
@@ -1697,7 +1698,7 @@ class VrStreamActivity: ComponentActivity()
 			"L2" to Tx.f("screen shape — {0}", shapeName),
 			"R2" to Tx.f("curvature — {0}", curvatureName()),
 			Tx.tr("Square") to Tx.f("sharpness — {0}", filterName),
-			Tx.tr("Triangle") to Tx.f("room — {0}", Tx.tr(if(screenPrefs.cinemaRoom) "hall"
+			Tx.tr("Triangle") to Tx.f("room — {0}", Tx.tr(if(screenPrefs.cinemaRoom) ScreenPrefs.ROOM_NAMES[screenPrefs.roomStyle].lowercase()
 					else if(!screenPrefs.passthroughEnabled) "hidden"
 					else ScreenPrefs.CINEMA_NAMES[screenPrefs.cinema], "cin")),
 			"X" to Tx.tr("recenter the screen in front of you"),

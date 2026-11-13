@@ -66,6 +66,11 @@ class ScreenPrefs(context: Context)
 		get() = prefs.getBoolean(KEY_CINEMA_ROOM, false)
 		set(value) { prefs.edit().putBoolean(KEY_CINEMA_ROOM, value).apply() }
 
+	/** Qual sala: 0 = cinema, 1 = horror (ver [ROOM_NAMES]). Vale na proxima sessao. */
+	var roomStyle: Int
+		get() = prefs.getInt(KEY_ROOM_STYLE, 0).coerceIn(0, ROOM_NAMES.size - 1)
+		set(value) { prefs.edit().putInt(KEY_ROOM_STYLE, value.coerceIn(0, ROOM_NAMES.size - 1)).apply() }
+
 	/**
 	 * Forma da tela: 0 = cilindro (curva), 1 = quad (plana).
 	 *
@@ -131,6 +136,9 @@ class ScreenPrefs(context: Context)
 		/** Nome de cada degrau do modo cinema, na ordem. */
 		val CINEMA_NAMES = listOf("normal", "soft", "medium", "strong")
 
+		/** Salas virtuais, na ordem de RoomTracer.STYLE_*. */
+		val ROOM_NAMES = listOf("Cinema", "Horror")
+
 		/**
 		 * Brilho, contraste e saturação de cada degrau.
 		 *
@@ -163,6 +171,7 @@ class ScreenPrefs(context: Context)
 		private const val KEY_PASSTHROUGH = "passthrough"
 		private const val KEY_CINEMA = "cinema"
 		private const val KEY_CINEMA_ROOM = "cinema_room"
+		private const val KEY_ROOM_STYLE = "room_style"
 
 		// 4 m e ~70 graus: tela grande sem forcar convergencia, confortavel por horas.
 		const val DEFAULT_RADIUS = 4.0f
