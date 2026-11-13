@@ -47,8 +47,49 @@ constexpr int32_t kHudHeight = 768;
 // e 0,95 m de largura da cerca de 35 graus -- grande o bastante para ler as
 // linhas sem cobrir a tela do jogo atras.
 // Fundo da sala de cinema: uma imagem equiretangular de 360x180 graus.
-constexpr int32_t kEnvWidth = 3072;
-constexpr int32_t kEnvHeight = 1536;
+//
+// O tamanho do swapchain e negociado na criacao: tenta o maior primeiro e
+// desce ate o runtime aceitar. 3072 pontos para 360 graus davam so ~8 pontos
+// por grau, bem abaixo da densidade do visor (~25), e a sala saia borrada.
+// A imagem que chega pode ter outro tamanho; ela e reduzida na subida.
+constexpr int32_t kEnvSizes[][2] = {
+	{ 8192, 4096 }, { 6144, 3072 }, { 4096, 2048 }, { 3072, 1536 },
+};
+
+// Reducao por media de area (caixa) de RGBA 8 bits. So encolhe: se o destino
+// for maior que a origem, cada pixel de destino cai em um unico pixel de
+// origem, o que equivale ao vizinho mais proximo.
+static std::vector<uint8_t> ResampleRgba(const std::vector<uint8_t> &src, int32_t sw, int32_t sh,
+		int32_t dw, int32_t dh)
+{
+	std::vector<uint8_t> out((size_t)dw * dh * 4);
+	for(int32_t y = 0; y < dh; ++y)
+	{
+		const int32_t y0 = (int32_t)((int64_t)y * sh / dh);
+		const int32_t y1 = std::max(y0 + 1, (int32_t)(((int64_t)(y + 1) * sh + dh - 1) / dh));
+		for(int32_t x = 0; x < dw; ++x)
+		{
+			const int32_t x0 = (int32_t)((int64_t)x * sw / dw);
+			const int32_t x1 = std::max(x0 + 1, (int32_t)(((int64_t)(x + 1) * sw + dw - 1) / dw));
+			uint32_t acc[4] = { 0, 0, 0, 0 };
+			uint32_t n = 0;
+			for(int32_t yy = y0; yy < y1 && yy < sh; ++yy)
+			{
+				const uint8_t *row = src.data() + ((size_t)yy * sw) * 4;
+				for(int32_t xx = x0; xx < x1 && xx < sw; ++xx)
+				{
+					const uint8_t *px = row + (size_t)xx * 4;
+					acc[0] += px[0]; acc[1] += px[1]; acc[2] += px[2]; acc[3] += px[3];
+					++n;
+				}
+			}
+			uint8_t *o = out.data() + ((size_t)y * dw + x) * 4;
+			for(int c = 0; c < 4; ++c)
+				o[c] = (uint8_t)(n ? (acc[c] + n / 2) / n : 0);
+		}
+	}
+	return out;
+}
 
 constexpr float kHudDistance = 1.5f;
 constexpr float kHudWidth1M = 0.95f;
@@ -972,30 +1013,38 @@ bool XrVideoSession::InitEnvSwapchain()
 	};
 
 	XrResult res = XR_ERROR_RUNTIME_FAILURE;
-	for(const auto &usage : kUsages)
+	for(const auto &size : kEnvSizes)
 	{
-		for(const auto &mode : kModes)
+		for(const auto &usage : kUsages)
 		{
-			XrSwapchainCreateInfo info{XR_TYPE_SWAPCHAIN_CREATE_INFO};
-			info.createFlags = mode.flags;
-			info.usageFlags = usage.usage;
-			info.format = chosen;
-			info.sampleCount = 1;
-			info.width = (uint32_t)kEnvWidth;
-			info.height = (uint32_t)kEnvHeight;
-			info.faceCount = 1;
-			info.arraySize = 1;
-			info.mipCount = 1;
-			res = xrCreateSwapchain(session_, &info, &env_swapchain_);
-			if(XR_SUCCEEDED(res))
+			for(const auto &mode : kModes)
 			{
-				env_static_ = mode.is_static;
-				LOGI("Cinema room: usage %s, %s image accepted", usage.name, mode.name);
-				break;
+				XrSwapchainCreateInfo info{XR_TYPE_SWAPCHAIN_CREATE_INFO};
+				info.createFlags = mode.flags;
+				info.usageFlags = usage.usage;
+				info.format = chosen;
+				info.sampleCount = 1;
+				info.width = (uint32_t)size[0];
+				info.height = (uint32_t)size[1];
+				info.faceCount = 1;
+				info.arraySize = 1;
+				info.mipCount = 1;
+				res = xrCreateSwapchain(session_, &info, &env_swapchain_);
+				if(XR_SUCCEEDED(res))
+				{
+					env_static_ = mode.is_static;
+					env_swap_width_ = size[0];
+					env_swap_height_ = size[1];
+					LOGI("Cinema room: %dx%d, usage %s, %s image accepted", (int)size[0],
+							(int)size[1], usage.name, mode.name);
+					break;
+				}
+				LOGW("Cinema room: %dx%d, usage %s, %s refused (%s)", (int)size[0], (int)size[1],
+						usage.name, mode.name, XrResultStr(instance_, res));
+				env_swapchain_ = XR_NULL_HANDLE;
 			}
-			LOGW("Cinema room: usage %s, %s refused (%s)", usage.name, mode.name,
-					XrResultStr(instance_, res));
-			env_swapchain_ = XR_NULL_HANDLE;
+			if(XR_SUCCEEDED(res))
+				break;
 		}
 		if(XR_SUCCEEDED(res))
 			break;
@@ -1012,17 +1061,18 @@ bool XrVideoSession::InitEnvSwapchain()
 			reinterpret_cast<XrSwapchainImageBaseHeader *>(env_images_.data()))))
 		return false;
 
-	LOGI("Cinema room: %dx%d, format 0x%llx, %u images", kEnvWidth, kEnvHeight,
+	LOGI("Cinema room: %dx%d, format 0x%llx, %u images", (int)env_swap_width_, (int)env_swap_height_,
 			(unsigned long long)chosen, image_count);
 	return true;
 }
 
 void XrVideoSession::SetEnvBitmap(const uint8_t *pixels, int32_t width, int32_t height)
 {
-	if(!pixels || width != kEnvWidth || height != kEnvHeight)
+	// Qualquer tamanho serve (2:1, equiretangular): a reducao para o tamanho do
+	// swapchain, se for preciso, acontece na subida para a GPU.
+	if(!pixels || width < 2 || height < 1 || (int64_t)width > 16384 || (int64_t)height > 8192)
 	{
-		LOGW("Cinema room bitmap ignored (%dx%d, expected %dx%d)", (int)width, (int)height,
-				(int)kEnvWidth, (int)kEnvHeight);
+		LOGW("Cinema room bitmap ignored (%dx%d)", (int)width, (int)height);
 		return;
 	}
 	std::lock_guard<std::mutex> lock(env_mutex_);
@@ -1039,11 +1089,20 @@ bool XrVideoSession::UpdateEnvLayer(XrCompositionLayerEquirect2KHR &layer, float
 	if(!env_ready_)
 	{
 		std::vector<uint8_t> pixels;
+		int32_t src_w = 0, src_h = 0;
 		{
 			std::lock_guard<std::mutex> lock(env_mutex_);
-			if(env_pixels_.empty() || env_width_ != kEnvWidth || env_height_ != kEnvHeight)
+			if(env_pixels_.empty() || env_width_ < 2 || env_height_ < 1)
 				return false;
 			pixels.swap(env_pixels_);
+			src_w = env_width_;
+			src_h = env_height_;
+		}
+		if(src_w != env_swap_width_ || src_h != env_swap_height_)
+		{
+			LOGI("Cinema room: resampling %dx%d -> %dx%d", (int)src_w, (int)src_h,
+					(int)env_swap_width_, (int)env_swap_height_);
+			pixels = ResampleRgba(pixels, src_w, src_h, env_swap_width_, env_swap_height_);
 		}
 
 		// Uma imagem so na versao estatica; no rodizio, o mesmo conteudo em
@@ -1065,7 +1124,7 @@ bool XrVideoSession::UpdateEnvLayer(XrCompositionLayerEquirect2KHR &layer, float
 			if(XR_SUCCEEDED(xrWaitSwapchainImage(env_swapchain_, &wait)) && index < env_images_.size())
 			{
 				glBindTexture(GL_TEXTURE_2D, env_images_[index].image);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, kEnvWidth, kEnvHeight,
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, env_swap_width_, env_swap_height_,
 						GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
 				glBindTexture(GL_TEXTURE_2D, 0);
 			}
@@ -1089,7 +1148,7 @@ bool XrVideoSession::UpdateEnvLayer(XrCompositionLayerEquirect2KHR &layer, float
 	layer.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
 	layer.subImage.swapchain = env_swapchain_;
 	layer.subImage.imageRect.offset = XrOffset2Di{0, 0};
-	layer.subImage.imageRect.extent = XrExtent2Di{kEnvWidth, kEnvHeight};
+	layer.subImage.imageRect.extent = XrExtent2Di{env_swap_width_, env_swap_height_};
 	layer.subImage.imageArrayIndex = 0;
 
 	// O centro da imagem e a parede da frente (-Z). Gira com o yaw da

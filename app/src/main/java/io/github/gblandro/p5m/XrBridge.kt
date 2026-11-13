@@ -264,7 +264,7 @@ class XrBridge(private val activity: Activity)
 			nativeSetHudVisible(nativePtr, visible)
 	}
 
-	/** Sobe o fundo da sala de cinema (3072x1536, ARGB_8888, sem padding). */
+	/** Sobe o fundo da sala de cinema (equiretangular 2:1, ARGB_8888, sem padding; reduzido no nativo se o swapchain for menor). */
 	fun setEnvBitmap(bitmap: Bitmap)
 	{
 		if(nativePtr != 0L)

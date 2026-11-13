@@ -447,6 +447,8 @@ private:
 	std::vector<XrSwapchainImageOpenGLESKHR> env_images_;
 	int32_t env_width_ = 0;
 	int32_t env_height_ = 0;
+	int32_t env_swap_width_ = 0;   // tamanho do swapchain, definido na criacao
+	int32_t env_swap_height_ = 0;
 	std::mutex env_mutex_;
 	std::vector<uint8_t> env_pixels_;
 	bool env_static_ = false;   // swapchain de imagem unica

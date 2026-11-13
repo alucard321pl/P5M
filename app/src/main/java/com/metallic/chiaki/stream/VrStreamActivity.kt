@@ -648,7 +648,7 @@ class VrStreamActivity: ComponentActivity()
 			try
 			{
 				val t0 = System.nanoTime()
-				val bitmap = CinemaRoom.render(style)
+				val bitmap = CinemaRoom.render(applicationContext, style)
 				Log.i(TAG, "Room ${ScreenPrefs.ROOM_NAMES[style]} drawn in ${(System.nanoTime() - t0) / 1_000_000} ms")
 				runOnUiThread {
 					xr?.setEnvBitmap(bitmap)
