@@ -253,7 +253,7 @@ internal val PL_STRINGS: Map<String, String> = mapOf(
 	"PSN returned an account id that is not numeric" to "PSN zwróciło identyfikator konta, który nie jest liczbą",
 	"Gamepad test" to "Test pada",
 	"Shows every button, stick, trigger and the touchpad live, and lets you test the rumble motors. Use it to check a controller before blaming the app." to "Pokazuje na żywo każdy przycisk, gałkę, spust i panel dotykowy oraz pozwala przetestować silniki wibracji. Sprawdź nim pada, zanim zaczniesz podejrzewać aplikację.",
-	"Press buttons and move the sticks on the controller. Each control lights up while pressed and turns green once it has worked. The ring on each stick is the deadzone the app cuts." to "Naciskaj przyciski i ruszaj gałkami na padzie. Każdy element świeci się, gdy jest wciśnięty, i robi się zielony, gdy już zadziałał. Pierścień wokół gałki to martwa strefa, którą aplikacja odcina.",
+	"Press buttons and move the sticks on the controller. Each control lights up while pressed and turns green once it has worked. The ring on each stick is the deadzone the app cuts. To leave with the controller, hold Circle for 1.5 seconds." to "Naciskaj przyciski i ruszaj gałkami na padzie. Każdy element świeci się, gdy jest wciśnięty, i robi się zielony, gdy już zadziałał. Pierścień wokół gałki to martwa strefa, którą aplikacja odcina. Aby wyjść padem, przytrzymaj Kółko przez 1,5 sekundy.",
 	"No gamepad detected. Press a button on the controller." to "Nie wykryto pada. Naciśnij przycisk na padzie.",
 	"Connected gamepads" to "Podłączone pady",
 	"headset controller" to "kontroler headsetu",

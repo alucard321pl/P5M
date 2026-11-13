@@ -113,7 +113,8 @@ class GamepadTestActivity: Activity()
 
 		root.addView(hint("Press buttons and move the sticks on the controller. Each "
 				+ "control lights up while pressed and turns green once it has worked. "
-				+ "The ring on each stick is the deadzone the app cuts."))
+				+ "The ring on each stick is the deadzone the app cuts. To leave with the "
+				+ "controller, hold Circle for 1.5 seconds."))
 
 		dispositivos = texto(13f, "#9aa0a6")
 		root.addView(dispositivos)
@@ -205,24 +206,60 @@ class GamepadTestActivity: Activity()
 		listarDispositivos()
 	}
 
+	/**
+	 * Decide pela FONTE do evento e pelo codigo da tecla, nao pelo nome do
+	 * dispositivo.
+	 *
+	 * A primeira versao exigia que o dispositivo tivesse nome de HID e nao fosse
+	 * "Device 0x...". Num headset em que o sistema entrega o pad por um
+	 * dispositivo anonimo, nenhuma tecla passava no filtro: o teste ficava mudo e
+	 * o pad continuava navegando no menu. O que identifica uma entrada de pad e
+	 * a fonte (gamepad, direcional, joystick) ou o codigo ser de botao de pad.
+	 */
+	private fun ehEntradaDePad(fonte: Int, codigo: Int): Boolean
+	{
+		val classes = InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_DPAD or InputDevice.SOURCE_JOYSTICK
+		return fonte and classes != 0 || KeyEvent.isGamepadButton(codigo)
+	}
+
+	private fun rotulo(device: InputDevice?, event: KeyEvent): String
+	{
+		val nome = device?.name ?: "?"
+		return "$nome #${event.deviceId}"
+	}
+
+	private val sairDoTeste = Runnable { finish() }
+
 	override fun dispatchKeyEvent(event: KeyEvent): Boolean
 	{
-		val device = event.device
-		if(!ehPad(device))
+		var codigo = event.keyCode
+		val pad = ehEntradaDePad(event.source, codigo)
+		// O Back do sistema vindo de um pad e o Circulo: conta como botao do teste.
+		// Back sem fonte de pad (o do headset) segue o caminho normal e sai da tela.
+		if(!pad)
 			return super.dispatchKeyEvent(event)
-		if(device != null)
+		if(codigo == KeyEvent.KEYCODE_BACK)
+			codigo = PadState.BOLA
+		val device = event.device
+		if(device != null && !device.name.startsWith("Device 0x"))
 			anotar(device)
 
 		if(event.repeatCount == 0 &&
 				(event.action == KeyEvent.ACTION_DOWN || event.action == KeyEvent.ACTION_UP))
 		{
 			val apertou = event.action == KeyEvent.ACTION_DOWN
-			val conhecida = estado.tecla(event.keyCode, apertou)
+			val conhecida = estado.tecla(codigo, apertou)
+			if(codigo == PadState.BOLA)
+			{
+				ui.removeCallbacks(sairDoTeste)
+				if(apertou)
+					ui.postDelayed(sairDoTeste, SAIR_MS)
+			}
 			if(apertou)
 			{
-				val nome = if(conhecida) Tx.tr(PadState.nome(event.keyCode))
-						else KeyEvent.keyCodeToString(event.keyCode)
-				ultimo.text = Tx.f("last input: {0}", nome)
+				val nome = if(conhecida) Tx.tr(PadState.nome(codigo))
+						else KeyEvent.keyCodeToString(codigo)
+				ultimo.text = Tx.f("last input: {0}", nome + "  [" + rotulo(device, event) + "]")
 			}
 			atualizar()
 		}
@@ -235,9 +272,9 @@ class GamepadTestActivity: Activity()
 	{
 		val joystick = event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
 		val device = event.device
-		if(!joystick || event.action != MotionEvent.ACTION_MOVE || !ehPad(device))
+		if(!joystick || event.action != MotionEvent.ACTION_MOVE)
 			return super.onGenericMotionEvent(event)
-		if(device != null)
+		if(device != null && !device.name.startsWith("Device 0x"))
 			anotar(device)
 
 		// Gatilho pode chegar por um de dois eixos, conforme o driver: vale o
@@ -436,6 +473,7 @@ class GamepadTestActivity: Activity()
 
 	override fun onDestroy()
 	{
+		ui.removeCallbacks(sairDoTeste)
 		super.onDestroy()
 		hid?.fechar()
 	}
@@ -663,6 +701,8 @@ class GamepadTestActivity: Activity()
 		val FORCAS = floatArrayOf(0.25f, 0.5f, 0.75f, 1f)
 
 		const val DURACAO_MS = 1000L
+		// Quanto tempo segurar o Circulo no pad para sair da tela.
+		const val SAIR_MS = 1500L
 		const val BUZINA_ESPERA_MS = 400L
 		const val PASSOS_RAMPA = 30
 		const val PEDIDO_BLUETOOTH = 4301
