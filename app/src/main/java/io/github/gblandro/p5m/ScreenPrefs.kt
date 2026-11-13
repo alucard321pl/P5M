@@ -138,8 +138,6 @@ class ScreenPrefs(context: Context)
 
 		/** Salas virtuais, na ordem de RoomTracer.STYLE_*. */
 		val ROOM_NAMES = listOf("Cinema", "Horror")
-		/** Indice da sala de terror em [ROOM_NAMES]. */
-		const val ROOM_HORROR = 1
 
 		/**
 		 * Brilho, contraste e saturação de cada degrau.
