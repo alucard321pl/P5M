@@ -196,6 +196,19 @@
             <meta-data android:name="com.oculus.vr.focusaware" android:value="true" />
         </activity>
 
+        <!-- Teste do pad: botoes, analogicos, gatilhos e vibracao ao vivo.
+             Painel 2D comum, pelo mesmo motivo da calibracao. -->
+        <activity
+            android:name="io.github.gblandro.p5m.GamepadTestActivity"
+            android:label="P5M — gamepad test"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize">
+            <intent-filter>
+                <category android:name="com.oculus.intent.category.2D" />
+            </intent-filter>
+        </activity>
+
         <!-- Calibracao dos analogicos. Painel 2D comum: e uma tela para olhar
              o controle largado na mesa, e o modo imersivo so atrapalharia.
              Precisa de configChanges como as outras, para uma troca de foco

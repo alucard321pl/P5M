@@ -196,6 +196,11 @@ class LauncherActivity: Activity()
 						+ "deadzone from that. Worth doing once per controller.") {
 			launch(Intent(this, StickCalibrationActivity::class.java), "stick calibration")
 		})
+		coluna.addView(navegacao("Gamepad test",
+				"Shows every button, stick, trigger and the touchpad live, and lets you test "
+						+ "the rumble motors. Use it to check a controller before blaming the app.") {
+			launch(Intent(this, GamepadTestActivity::class.java), "gamepad test")
+		})
 
 		// ----------------------------------------------------------- ferramentas
 		coluna.addView(secao("Tools"))
