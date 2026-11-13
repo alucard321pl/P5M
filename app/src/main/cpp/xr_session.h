@@ -343,6 +343,7 @@ public:
 	 */
 	void SetEnvBitmap(const uint8_t *pixels, int32_t width, int32_t height);
 	void SetCinemaRoom(bool enabled) { cinema_room_ = enabled; }
+	void SetRoomFlicker(bool enabled) { room_flicker_ = enabled; }
 	// Falso quando o runtime nao tem XR_KHR_composition_layer_equirect2 ou
 	// recusou o swapchain: quem chama deve cair para o passthrough.
 	bool CinemaRoomSupported() const { return env_supported_; }
@@ -455,6 +456,7 @@ private:
 	bool env_ready_ = false;    // ja subiu para a GPU
 	std::atomic<bool> env_supported_{false};
 	std::atomic<bool> cinema_room_{false};
+	std::atomic<bool> room_flicker_{false};   // lampada falhando (sala de terror)
 	bool equirect2_supported_ = false;
 
 	XrPassthroughFB passthrough_ = XR_NULL_HANDLE;

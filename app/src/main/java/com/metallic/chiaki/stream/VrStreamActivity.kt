@@ -628,6 +628,7 @@ class VrStreamActivity: ComponentActivity()
 		val bridge = xr ?: return
 		val room = screenPrefs.cinemaRoom && bridge.isCinemaRoomSupported
 		bridge.setCinemaRoom(room)
+		bridge.setRoomFlicker(room && screenPrefs.roomStyle == ScreenPrefs.ROOM_HORROR)
 		bridge.setPassthrough(screenPrefs.passthroughEnabled && !room && bridge.isPassthroughSupported)
 		if(room)
 			ensureCinemaRoom()

@@ -278,6 +278,13 @@ class XrBridge(private val activity: Activity)
 			nativeSetCinemaRoom(nativePtr, enabled)
 	}
 
+	/** Faz a luz da sala falhar (escala de cor da camada, sem custo de textura). */
+	fun setRoomFlicker(enabled: Boolean)
+	{
+		if(nativePtr != 0L)
+			nativeSetRoomFlicker(nativePtr, enabled)
+	}
+
 	fun setPassthrough(enabled: Boolean)
 	{
 		if(nativePtr != 0L)
@@ -330,6 +337,7 @@ class XrBridge(private val activity: Activity)
 	private external fun nativeSetPassthrough(ptr: Long, enabled: Boolean)
 	private external fun nativeSetEnvBitmap(ptr: Long, bitmap: Bitmap)
 	private external fun nativeSetCinemaRoom(ptr: Long, enabled: Boolean)
+	private external fun nativeSetRoomFlicker(ptr: Long, enabled: Boolean)
 	private external fun nativeIsCinemaRoomSupported(ptr: Long): Boolean
 	private external fun nativeIsPassthroughSupported(ptr: Long): Boolean
 	private external fun nativeRecenter(ptr: Long)

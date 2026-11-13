@@ -243,6 +243,13 @@ JNIEXPORT void JNICALL JNI_FCN(nativeSetCinemaRoom)(JNIEnv *, jobject, jlong ptr
 		Handle(ptr)->SetCinemaRoom(enabled == JNI_TRUE);
 }
 
+JNIEXPORT void JNICALL JNI_FCN(nativeSetRoomFlicker)(JNIEnv *, jobject, jlong ptr,
+		jboolean enabled)
+{
+	if(ptr)
+		Handle(ptr)->SetRoomFlicker(enabled == JNI_TRUE);
+}
+
 JNIEXPORT jboolean JNICALL JNI_FCN(nativeIsCinemaRoomSupported)(JNIEnv *, jobject, jlong ptr)
 {
 	return (ptr && Handle(ptr)->CinemaRoomSupported()) ? JNI_TRUE : JNI_FALSE;

@@ -56,6 +56,41 @@ constexpr int32_t kEnvSizes[][2] = {
 	{ 8192, 4096 }, { 6144, 3072 }, { 4096, 2048 }, { 3072, 1536 },
 };
 
+// Ganho de brilho da sala de terror ao longo do tempo: uma lampada falhando.
+//
+// A cada janela de 7 s sorteia-se (de forma deterministica, so pelo numero da
+// janela) um instante e uma duracao para uma rajada de piscadas rapidas, onde
+// quase tudo e escuro com lampejos curtos; em uma janela de quatro ha ainda um
+// apagao seco logo depois. Fora disso a luz so "respira" de leve. O resultado
+// vai na escala de cor da camada, entao nao custa nova subida de textura.
+static float RoomFlickerGain(double t)
+{
+	auto hash = [](uint32_t x) {
+		x ^= x >> 16; x *= 0x7feb352dU; x ^= x >> 15; x *= 0x846ca68bU; x ^= x >> 16;
+		return x;
+	};
+	const double kSlot = 7.0;
+	const int64_t slot = (int64_t)std::floor(t / kSlot);
+	const uint32_t h = hash((uint32_t)slot * 2654435761u + 17u);
+	const double local = t - (double)slot * kSlot;
+	const double start = 1.0 + (double)(h & 0xFF) / 255.0 * 3.5;
+	const double len = 0.35 + (double)((h >> 8) & 0xFF) / 255.0 * 0.9;
+	float g = 0.88f + 0.12f * (float)(0.5 + 0.5 * std::sin(t * 2.3 + (double)(h & 7)));
+	if(local >= start && local < start + len)
+	{
+		const uint32_t step = (uint32_t)std::floor((local - start) * 28.0);
+		const uint32_t hs = hash(h ^ (step * 0x9E3779B9u));
+		g = ((hs & 3u) == 0u) ? 1.0f : 0.07f + (float)((hs >> 2) & 7u) * 0.03f;
+	}
+	else if(((h >> 16) & 3u) == 0u)
+	{
+		const double blackout = start + len + 0.4;
+		if(local >= blackout && local < blackout + 0.5)
+			g = 0.04f;
+	}
+	return g;
+}
+
 // Reducao por media de area (caixa) de RGBA 8 bits. So encolhe: se o destino
 // for maior que a origem, cada pixel de destino cai em um unico pixel de
 // origem, o que equivale ao vizinho mais proximo.
@@ -2235,6 +2270,8 @@ void XrVideoSession::RenderFrame()
 	// duas coisas respondem a mesma pergunta, "o que ha atras da tela".
 	XrCompositionLayerEquirect2KHR env_layer{XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR};
 	XrCompositionLayerImageLayoutFB env_layout{XR_TYPE_COMPOSITION_LAYER_IMAGE_LAYOUT_FB};
+	// Vive neste escopo, como os outros elos: o xrEndFrame le depois.
+	XrCompositionLayerColorScaleBiasKHR env_color{XR_TYPE_COMPOSITION_LAYER_COLOR_SCALE_BIAS_KHR};
 	const bool room_on = cinema_room_.load() && env_supported_.load();
 	if(room_on)
 	{
@@ -2253,6 +2290,16 @@ void XrVideoSession::RenderFrame()
 			{
 				env_layout.flags = XR_COMPOSITION_LAYER_IMAGE_LAYOUT_VERTICAL_FLIP_BIT_FB;
 				env_layer.next = &env_layout;
+			}
+			if(color_scale_supported_ && room_flicker_.load())
+			{
+				const double now = std::chrono::duration<double>(
+						std::chrono::steady_clock::now().time_since_epoch()).count();
+				const float g = RoomFlickerGain(now);
+				env_color.colorScale = XrColor4f{g, g * 0.94f, g * 0.90f, 1.0f};
+				env_color.colorBias = XrColor4f{0.0f, 0.0f, 0.0f, 0.0f};
+				env_color.next = const_cast<void *>(env_layer.next);
+				env_layer.next = &env_color;
 			}
 			layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader *>(&env_layer));
 		}
